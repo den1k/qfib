@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## fiBLE - BLE Microcontroller Control App
 
-## Getting Started
+This is a Next.js web app for controlling ESP32 microcontrollers over Bluetooth Low Energy (BLE) using the Web Bluetooth API.
 
-First, run the development server:
+### Features
+- Scan and connect to ESP32 devices (filtered by "ESP" name prefix).
+- Send commands via arrow keys (defaults: forward/back/left/right) or free-form chat input.
+- Receive responses/notifications from the ESP32 in a chat log.
+- Uses Nordic UART Service (NUS) for serial-like communication.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Running the Web App
+1. Install dependencies: `npm install`
+2. Start dev server: `npm run dev`
+3. Open http://localhost:3000 in Chrome/Edge (requires Bluetooth support).
+4. Click "Connect to ESP32", select your device.
+5. Use arrow keys or chat to send commands.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### ESP32 Firmware Setup
+The app expects the ESP32 to advertise as "ESP32" with NUS UUIDs. Use the provided Arduino sketch:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install [Arduino IDE](https://www.arduino.cc/en/software) and [ESP32 Board Package](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html).
+2. Open `firmware/ESP32_NUS.ino` in Arduino IDE.
+3. Select your ESP32 board (e.g., "ESP32 Dev Module") and port.
+4. Upload the sketch to your ESP32.
+5. Open Serial Monitor (115200 baud) for debug logs.
+6. The ESP32 will advertise via BLE—connect from the web app.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+#### Customizing the Firmware
+- In `setup()`: Change `BLEDevice::init("ESP32")` to your preferred device name (must start with "ESP" for app filter).
+- In `onWrite()`: Extend command handling (e.g., integrate motors, sensors). Currently handles arrow defaults and echoes custom commands.
+- For periodic sends: Uncomment the loop section to notify status updates.
 
-## Learn More
+### Notes
+- **Browser Support**: Chrome 56+ / Edge 79+ on desktop; mobile Android Chrome works, but iOS Safari does not support Web Bluetooth.
+- **HTTPS/Localhost**: BLE requires secure context—use localhost for dev.
+- **Troubleshooting**:
+  - If connection fails: Ensure UUIDs match (NUS standard).
+  - No commands received on ESP32: Check Serial Monitor for logs.
+  - Permissions: Browser will prompt for BLE access.
 
-To learn more about Next.js, take a look at the following resources:
+### Project Structure
+- `src/app/page.tsx`: Main UI (connection, keys, chat).
+- `src/app/hooks/useBLE.ts`: BLE logic with NUS.
+- `src/types/bluetooth.d.ts`: Web Bluetooth types.
+- `firmware/ESP32_NUS.ino`: ESP32 Arduino sketch.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For issues or enhancements (e.g., custom mappings, multiple devices), see the code or ask!
