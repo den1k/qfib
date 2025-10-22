@@ -127,13 +127,16 @@ export const useMQTT = () => {
     }
   }, [publishCommand]);
 
+  // Auto-connect on mount
   useEffect(() => {
+    connect();
+    
     return () => {
       if (client) {
         client.end();
       }
     };
-  }, [client]);
+  }, []); // Empty dependency array means this runs once on mount
 
   return {
     isConnected,

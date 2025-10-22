@@ -4,6 +4,8 @@ q(ueue) (wi)fi b(luetooth)
 
 This is a Next.js web app for controlling ESP32 microcontrollers over Bluetooth Low Energy (BLE) using the Web Bluetooth API.
 
+🌐 **Live Demo**: [https://qfib.netlify.app/](https://qfib.netlify.app/)
+
 ### Features
 - Scan and connect to ESP32 devices (filtered by "ESP" name prefix).
 - Send commands via arrow keys (defaults: forward/back/left/right) or free-form chat input.

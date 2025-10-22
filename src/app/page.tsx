@@ -31,7 +31,7 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [url, setUrl] = useState('wss://x21717ca.ala.us-east-1.emqxsl.com:8443/mqtt');
   const [provisionSent, setProvisionSent] = useState(false);
-  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('ble');
+  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,8 +40,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [bleMessages, mqttMessages]);
+    // Only scroll to bottom if there are messages to avoid scrolling on initial load
+    const currentMessages = activeMode === 'ble' ? bleMessages : mqttMessages;
+    if (currentMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [bleMessages, mqttMessages, activeMode]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
