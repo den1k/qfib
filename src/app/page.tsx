@@ -95,7 +95,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="retro-title">fiBLE</h1>
+          <h1 className="retro-title">qfib</h1>
           
           {/* Mode Selection */}
           <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg">

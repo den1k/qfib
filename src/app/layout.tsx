@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "fiBLE - ESP32 BLE Controller",
+  title: "qfib - ESP32 BLE Controller",
   description: "Control ESP32 devices via Bluetooth Low Energy and WebSocket",
 };
 

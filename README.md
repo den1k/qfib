@@ -1,4 +1,6 @@
-## fiBLE - BLE Microcontroller Control App
+## qfib - BLE Microcontroller Control App
+
+q(ueue) (wi)fi b(luetooth)
 
 This is a Next.js web app for controlling ESP32 microcontrollers over Bluetooth Low Energy (BLE) using the Web Bluetooth API.
 
