@@ -29,10 +29,58 @@ export const useBLE = () => {
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<BLEMessage[]>([]);
   const [bleService, setBleService] = useState<BLEService | null>(null);
+  const [healthCheckInterval, setHealthCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
   const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
   const RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
   const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+  const handleDisconnection = useCallback(() => {
+    console.log('BLE device disconnected');
+    setConnected(false);
+    setDevice(null);
+    setBleService(null);
+    
+    // Clear health check interval
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+      setHealthCheckInterval(null);
+    }
+    
+    // Add disconnection message
+    const disconnectionMessage: BLEMessage = {
+      message: 'BLE device disconnected',
+      timestamp: new Date(),
+      source: 'ble'
+    };
+    setMessages(prev => [...prev.slice(-9), disconnectionMessage]);
+  }, [healthCheckInterval]);
+
+  const startHealthCheck = useCallback((service: BLEService) => {
+    // Clear any existing interval
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+    }
+    
+    const interval = setInterval(async () => {
+      try {
+        // Check if server is still connected (silent operation)
+        if (!service.server.connected) {
+          console.log('Server disconnected, triggering disconnection handling');
+          handleDisconnection();
+          return;
+        }
+        
+        // Additional check: try to get the service again (silent)
+        await service.server.getPrimaryService(SERVICE_UUID);
+      } catch (err) {
+        console.log('Health check failed, device disconnected:', err);
+        handleDisconnection();
+      }
+    }, 5000); // Check every 5 seconds
+    
+    setHealthCheckInterval(interval);
+  }, [healthCheckInterval, handleDisconnection]);
 
   const connect = useCallback(async () => {
     try {
@@ -54,6 +102,9 @@ export const useBLE = () => {
       if (!server) {
         throw new Error('Failed to connect to GATT server');
       }
+
+      // Add disconnect event listener
+      device.addEventListener('gattserverdisconnected', handleDisconnection);
 
       const service = await server.getPrimaryService(SERVICE_UUID);
       const rxCharacteristic = await service.getCharacteristic(RX_CHARACTERISTIC_UUID);
@@ -90,6 +141,9 @@ export const useBLE = () => {
       });
       setConnected(true);
 
+      // Start health monitoring
+      startHealthCheck(bleService);
+
       // Add connection message
       const connectionMessage: BLEMessage = {
         message: 'Connected to ESP32-C6-SPARK-GATE',
@@ -107,18 +161,34 @@ export const useBLE = () => {
 
   const disconnect = useCallback(async () => {
     try {
+      // Clear health check interval
+      if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+        setHealthCheckInterval(null);
+      }
+      
       if (bleService) {
+        // Note: Web Bluetooth API doesn't support removeEventListener
+        // The event listener will be automatically cleaned up when the device disconnects
         await bleService.server.disconnect();
         setBleService(null);
       }
       setDevice(null);
       setConnected(false);
       setError(null);
+      
+      // Add manual disconnect message
+      const disconnectMessage: BLEMessage = {
+        message: 'BLE manually disconnected',
+        timestamp: new Date(),
+        source: 'ble'
+      };
+      setMessages(prev => [...prev.slice(-9), disconnectMessage]);
     } catch (err) {
       console.error('BLE disconnect error:', err);
       setError(err instanceof Error ? err.message : 'Disconnect error');
     }
-  }, [bleService]);
+  }, [bleService, healthCheckInterval, handleDisconnection]);
 
   const sendCommand = useCallback(async (command: string) => {
     if (!bleService || !connected) {
@@ -141,17 +211,33 @@ export const useBLE = () => {
     } catch (err) {
       console.error('BLE send error:', err);
       setError(err instanceof Error ? err.message : 'Send error');
+      
+      // If send fails, it might be due to disconnection
+      // Trigger disconnection handling
+      handleDisconnection();
     }
-  }, [bleService, connected]);
+  }, [bleService, connected, handleDisconnection]);
+
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear health check interval
+      if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+      }
+      
+      // Disconnect if still connected
       if (bleService) {
+        // Note: Web Bluetooth API doesn't support removeEventListener
+        // The event listener will be automatically cleaned up when the device disconnects
         bleService.server.disconnect();
       }
     };
-  }, [bleService]);
+  }, [bleService, healthCheckInterval, handleDisconnection]);
 
   return {
     connected,
@@ -160,6 +246,7 @@ export const useBLE = () => {
     connect,
     disconnect,
     sendCommand,
-    messages
+    messages,
+    clearMessages
   };
 };

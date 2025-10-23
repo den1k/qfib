@@ -238,9 +238,7 @@ section {
   box-shadow: var(--terminal-border-glow);
 }
 
-div {
-  margin-bottom: 3px;
-}
+/* Removed global div margin that breaks flex layouts */
 
 form {
   margin-bottom: 6px;
@@ -437,3 +435,4 @@ form {
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: #00cc00 !important;
 }
+

@@ -65,67 +65,42 @@ class MyCallbacks: public BLECharacteristicCallbacks {
         Serial.println("Right command received");
         pTxCharacteristic->setValue("Executed: right");
       } else if (rxValue.startsWith("PROVISION:")) {
-        // Parse: PROVISION:ssid=foo;pass=bar;url=https://example.com
+        // Parse: PROVISION:ssid=foo;pass=bar
         String payload = rxValue.substring(10); // Skip "PROVISION:"
         // Split by ';'
         int firstSemi = payload.indexOf(';');
-        int secondSemi = payload.indexOf(';', firstSemi + 1);
         
-        if (firstSemi != -1 && secondSemi != -1) {
-          // ssid=MyWiFi (from 5 to firstSemi)
-          String ssidStr = payload.substring(5, firstSemi);
-          ssidStr.toCharArray(wifi_ssid, MAX_SSID_LEN);
+        if (firstSemi != -1) {
+          // Parse: ssid=MyWiFi;pass=MyPass
+          // Find the '=' positions for each field
+          int ssidEq = payload.indexOf('=');
+          int passEq = payload.indexOf('=', firstSemi);
           
-          // pass=MyPass (from firstSemi+5 to secondSemi)
-          String passStr = payload.substring(firstSemi + 5, secondSemi);
-          passStr.toCharArray(wifi_pass, MAX_PASS_LEN);
-          
-          // url=ws://host:port/path (from secondSemi+4 to end)
-          String urlStr = payload.substring(secondSemi + 4);
-          
-          // Parse URL: assume ws://host:port/path or wss:// but ignore scheme for now
-          // Simple parse: find :// then host until : or /
-          int schemeEnd = urlStr.indexOf("://");
-          if (schemeEnd != -1) urlStr = urlStr.substring(schemeEnd + 3);
-          
-          int colonPos = urlStr.indexOf(':');
-          int slashPos = urlStr.indexOf('/', colonPos != -1 ? colonPos : 0);
-          
-          if (colonPos != -1 && slashPos != -1) {
-            // host, port, path
-            String hostStr = urlStr.substring(0, colonPos);
-            hostStr.toCharArray(ws_host, MAX_HOST_LEN);
-            ws_port = urlStr.substring(colonPos + 1, slashPos).toInt();
-            String pathStr = urlStr.substring(slashPos);
-            pathStr.toCharArray(ws_path, MAX_PATH_LEN);
-          } else if (slashPos != -1) {
-            // host/path no port
-            String hostStr = urlStr.substring(0, slashPos);
-            hostStr.toCharArray(ws_host, MAX_HOST_LEN);
-            String pathStr = urlStr.substring(slashPos);
-            pathStr.toCharArray(ws_path, MAX_PATH_LEN);
+          if (ssidEq != -1 && passEq != -1) {
+            // Extract SSID: from after '=' to first ';'
+            String ssidStr = payload.substring(ssidEq + 1, firstSemi);
+            ssidStr.toCharArray(wifi_ssid, MAX_SSID_LEN);
+            
+            // Extract Password: from after '=' to end
+            String passStr = payload.substring(passEq + 1);
+            passStr.toCharArray(wifi_pass, MAX_PASS_LEN);
+            
+            // Store WiFi credentials
+            int eeprom_addr = 0;
+            EEPROM.write(eeprom_addr++, true);
+            EEPROM.put(eeprom_addr, wifi_ssid); eeprom_addr += MAX_SSID_LEN;
+            EEPROM.put(eeprom_addr, wifi_pass); eeprom_addr += MAX_PASS_LEN;
+            EEPROM.commit();
+            
+            pTxCharacteristic->setValue("WiFi credentials saved! Rebooting...");
+            pTxCharacteristic->notify();
+            delay(1000);
+            ESP.restart();
           } else {
-            // just host
-            urlStr.toCharArray(ws_host, MAX_HOST_LEN);
+            pTxCharacteristic->setValue("Invalid format. Use: PROVISION:ssid=...;pass=...");
           }
-          
-          // Store
-          int eeprom_addr = 0;
-          EEPROM.write(eeprom_addr++, true);
-          EEPROM.put(eeprom_addr, wifi_ssid); eeprom_addr += MAX_SSID_LEN;
-          EEPROM.put(eeprom_addr, wifi_pass); eeprom_addr += MAX_PASS_LEN;
-          EEPROM.put(eeprom_addr, ws_host); eeprom_addr += MAX_HOST_LEN;
-          EEPROM.put(eeprom_addr, ws_port); eeprom_addr += sizeof(uint16_t);
-          EEPROM.put(eeprom_addr, ws_path);
-          EEPROM.commit();
-          
-          pTxCharacteristic->setValue("Provisioned! Rebooting...");
-          pTxCharacteristic->notify();
-          delay(1000);
-          ESP.restart();
         } else {
-          pTxCharacteristic->setValue("Invalid format. Use: PROVISION:ssid=...;pass=...;url=...");
-          pTxCharacteristic->notify();
+          pTxCharacteristic->setValue("Invalid format. Use: PROVISION:ssid=...;pass=...");
         }
       } else {
         // Free-form command

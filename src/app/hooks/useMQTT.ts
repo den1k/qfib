@@ -5,6 +5,8 @@ import mqtt from 'mqtt';
 
 interface MQTTConfig {
   brokerUrl: string;
+  username: string;
+  password: string;
   commandTopic: string;
   statusTopic: string;
   clientId: string;
@@ -25,6 +27,8 @@ export const useMQTT = () => {
 
   const config: MQTTConfig = {
     brokerUrl: process.env.MQTT_BROKER_URL || 'wss://broker.emqx.io:8084/mqtt',
+    username: process.env.MQTT_USERNAME || 'spark_gate_esp32',
+    password: process.env.MQTT_PASSWORD || 'eh8W6N7.Rzj@P-!',
     commandTopic: process.env.MQTT_COMMAND_TOPIC || 'spark_gate/command',
     statusTopic: process.env.MQTT_STATUS_TOPIC || 'spark_gate/status',
     clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`
@@ -34,6 +38,8 @@ export const useMQTT = () => {
     try {
       const mqttClient = mqtt.connect(config.brokerUrl, {
         clientId: config.clientId,
+        username: config.username,
+        password: config.password,
         clean: true,
         reconnectPeriod: 5000,
         connectTimeout: 30 * 1000,
@@ -127,6 +133,10 @@ export const useMQTT = () => {
     }
   }, [publishCommand]);
 
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
   // Auto-connect on mount
   useEffect(() => {
     connect();
@@ -146,6 +156,7 @@ export const useMQTT = () => {
     disconnect,
     sendServoCommand,
     sendCustomAngle,
-    publishCommand
+    publishCommand,
+    clearMessages
   };
 };
