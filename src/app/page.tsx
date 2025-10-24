@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useBLE } from './hooks/useBLE';
 import { useMQTT } from './hooks/useMQTT';
+import { useFormSchema } from './hooks/useFormSchema';
+import { DynamicFormRenderer } from './components/DynamicFormRenderer';
+import { SchemaEditor } from './components/SchemaEditor';
+import { defaultSchemas } from './defaults/defaultSchemas';
 
 export default function Home() {
   const { 
@@ -23,21 +27,44 @@ export default function Home() {
     connect: connectMQTT,
     disconnect: disconnectMQTT,
     sendServoCommand: sendMQTTCommand,
-    sendCustomAngle,
     clearMessages: clearMQTTMessages
   } = useMQTT();
+
+  const {
+    schemas,
+    activeSchema,
+    saveSchema,
+    deleteSchema,
+    setActiveSchema
+  } = useFormSchema();
   
   const [input, setInput] = useState('');
-  const [customAngle, setCustomAngle] = useState('90');
   const [ssid, setSsid] = useState('');
   const [password, setPassword] = useState('');
   const [provisionSent, setProvisionSent] = useState(false);
   const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
+  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Initialize default schemas if none exist
+  useEffect(() => {
+    if (schemas.length === 0) {
+      defaultSchemas.forEach(schema => saveSchema(schema));
+    }
+  }, [schemas.length, saveSchema]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Unified command sender
+  const sendCommand = (command: string) => {
+    if (activeMode === 'ble' && bleConnected) {
+      sendBLECommand(command);
+    } else if (activeMode === 'mqtt' && mqttConnected) {
+      sendMQTTCommand(command as any);
+    }
   };
 
   useEffect(() => {
@@ -72,24 +99,9 @@ export default function Home() {
     setProvisionSent(true);
   };
 
-  const handleCustomAngle = (e: React.FormEvent) => {
-    e.preventDefault();
-    const angle = parseInt(customAngle);
-    if (!isNaN(angle)) {
-      if (activeMode === 'ble' && bleConnected) {
-        sendBLECommand(angle.toString());
-      } else if (activeMode === 'mqtt' && mqttConnected) {
-        sendCustomAngle(angle);
-      }
-    }
-  };
-
-  const sendDirectionCommand = (command: string) => {
-    if (activeMode === 'ble' && bleConnected) {
-      sendBLECommand(command);
-    } else if (activeMode === 'mqtt' && mqttConnected) {
-      sendMQTTCommand(command as any);
-    }
+  const handleSchemaSave = (schema: any) => {
+    saveSchema(schema);
+    setShowSchemaEditor(false);
   };
 
   const clearAllMessages = () => {
@@ -261,93 +273,46 @@ export default function Home() {
             </div>
           )}
 
-          {/* Servo Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Direction Controls */}
+          {/* Dynamic Form Controls */}
+          <div className="mb-6">
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Direction Controls</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => sendDirectionCommand('up')}
-                  disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
-                  className={`p-4 rounded-lg font-medium transition-colors ${
-                    (activeMode === 'ble' ? !bleConnected : !mqttConnected)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  ⬆️ Up (180°)
-                </button>
-                
-                <button
-                  onClick={() => sendDirectionCommand('down')}
-                  disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
-                  className={`p-4 rounded-lg font-medium transition-colors ${
-                    (activeMode === 'ble' ? !bleConnected : !mqttConnected)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  ⬇️ Down (0°)
-                </button>
-                
-                <button
-                  onClick={() => sendDirectionCommand('left')}
-                  disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
-                  className={`p-4 rounded-lg font-medium transition-colors ${
-                    (activeMode === 'ble' ? !bleConnected : !mqttConnected)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-orange-600 text-white hover:bg-orange-700'
-                  }`}
-                >
-                  ⬅️ Left (45°)
-                </button>
-                
-                <button
-                  onClick={() => sendDirectionCommand('right')}
-                  disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
-                  className={`p-4 rounded-lg font-medium transition-colors ${
-                    (activeMode === 'ble' ? !bleConnected : !mqttConnected)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
-                  }`}
-                >
-                  ➡️ Right (135°)
-                </button>
-              </div>
-            </div>
-
-            {/* Custom Angle Control */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Custom Angle</h2>
-              <form onSubmit={handleCustomAngle} className="space-y-4">
-                <div>
-                  <label htmlFor="angle" className="block text-sm font-medium text-gray-700 mb-2">
-                    Angle (0-180°)
-                  </label>
-                  <input
-                    type="number"
-                    id="angle"
-                    min="0"
-                    max="180"
-                    value={customAngle}
-                    onChange={(e) => setCustomAngle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter angle (0-180)"
-                  />
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Controls</h2>
+                <div className="flex gap-2">
+                  {schemas.length > 1 && (
+                    <select
+                      value={activeSchema?.id || ''}
+                      onChange={(e) => setActiveSchema(e.target.value)}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      {schemas.map(schema => (
+                        <option key={schema.id} value={schema.id}>
+                          {schema.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    onClick={() => setShowSchemaEditor(!showSchemaEditor)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                  >
+                    {showSchemaEditor ? 'Hide Editor' : 'Edit Schema'}
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
-                  className={`w-full py-2 rounded-lg font-medium transition-colors ${
-                    (activeMode === 'ble' ? !bleConnected : !mqttConnected)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  }`}
-                >
-                  Set Angle
-                </button>
-              </form>
+              </div>
+              
+              {showSchemaEditor ? (
+                <SchemaEditor
+                  onSave={handleSchemaSave}
+                  currentSchema={activeSchema}
+                />
+              ) : (
+                <DynamicFormRenderer
+                  schema={activeSchema}
+                  connected={activeMode === 'ble' ? bleConnected : mqttConnected}
+                  onCommand={sendCommand}
+                />
+              )}
             </div>
           </div>
 
