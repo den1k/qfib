@@ -60,15 +60,6 @@ export function SchemaEditor({ onSave, currentSchema }: SchemaEditorProps) {
     }
   };
 
-  const loadTemplate = (templateName: string) => {
-    const template = defaultSchemas.find(s => s.name === templateName);
-    if (template) {
-      setJsonText(JSON.stringify(template, null, 2));
-      setSchemaName(template.name);
-      setError(null);
-    }
-  };
-
   const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setJsonText(e.target.value);
     setError(null);
@@ -85,19 +76,6 @@ export function SchemaEditor({ onSave, currentSchema }: SchemaEditorProps) {
             placeholder="Schema Name"
             className="schema-name-input"
           />
-          
-          <div className="template-buttons">
-            <label>Load Template:</label>
-            <button onClick={() => loadTemplate('Movement Controls')}>
-              Movement
-            </button>
-            <button onClick={() => loadTemplate('Advanced Controls')}>
-              Advanced
-            </button>
-            <button onClick={() => loadTemplate('Custom Command')}>
-              Custom
-            </button>
-          </div>
           
           <div className="editor-actions">
             <button onClick={handleSave} className="save-button">

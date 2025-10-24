@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import Form from '@rjsf/core';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import { debounce } from 'lodash.debounce';
+import validator from '@rjsf/validator-ajv8';
 import { FormSchema } from '../../types/formSchema';
 import { buildCommand, getFieldSendMode, getFieldDebounceMs } from '../utils/commandBuilder';
 import { CustomFieldTemplate, CustomObjectFieldTemplate, CustomTitleField, CustomBaseInputTemplate, CustomButtonTemplates, customWidgets } from './CustomRJSFTheme';
@@ -14,21 +14,41 @@ interface DynamicFormRendererProps {
 
 export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFormRendererProps) {
   const [formData, setFormData] = useState<any>({});
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  if (!schema) {
-    return (
-      <div className="no-schema">
-        <p>No form schema selected. Please create or select a schema.</p>
-      </div>
-    );
-  }
+  const sendFieldCommand = useCallback((fieldName: string, fieldValue: any, fieldSchema: any) => {
+    if (!connected) return;
+    
+    const command = buildCommand(fieldSchema, formData, fieldName, fieldValue);
+    if (command) {
+      console.log(`Sending command for ${fieldName}:`, command);
+      onCommand(command);
+    }
+  }, [connected, formData, onCommand]);
 
-  const handleFormChange = useCallback(({ formData: newFormData }: { formData: any }) => {
+  const handleFormChange = useCallback((e: any) => {
+    const newFormData = e.formData || {};
+    const previousFormData = formData;
     setFormData(newFormData);
     
-    // Process each field for immediate/debounced sending
-    Object.keys(newFormData).forEach(fieldName => {
+    if (!schema) return;
+    
+    // Skip sending commands during initial form load
+    if (isInitialLoad) {
+      setIsInitialLoad(false);
+      return;
+    }
+    
+    // Find which field actually changed
+    const changedFields = Object.keys(newFormData).filter(fieldName => {
+      return newFormData[fieldName] !== previousFormData[fieldName];
+    });
+    
+    console.log('Changed fields:', changedFields);
+    
+    // Only process fields that actually changed
+    changedFields.forEach(fieldName => {
       const fieldValue = newFormData[fieldName];
       const fieldSchema = schema.schema.properties?.[fieldName] as any;
       
@@ -36,7 +56,10 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
 
       const sendMode = getFieldSendMode(fieldSchema, schema.config.globalSendMode);
       
-      if (sendMode === 'immediate') {
+      if (sendMode === 'never') {
+        // Don't send any command for this field
+        return;
+      } else if (sendMode === 'immediate') {
         sendFieldCommand(fieldName, fieldValue, fieldSchema);
       } else if (sendMode === 'debounced') {
         const debounceMs = getFieldDebounceMs(fieldSchema, schema.config.debounceMs);
@@ -56,19 +79,11 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
         debounceTimers.current.set(fieldName, timer);
       }
     });
-  }, [schema, formData]);
+  }, [schema, sendFieldCommand, formData, isInitialLoad]);
 
-  const sendFieldCommand = (fieldName: string, fieldValue: any, fieldSchema: any) => {
-    if (!connected) return;
-    
-    const command = buildCommand(fieldSchema, formData, fieldName, fieldValue);
-    if (command) {
-      onCommand(command);
-    }
-  };
-
-  const handleSubmit = useCallback(({ formData: submitData }: { formData: any }) => {
-    if (!connected) return;
+  const handleSubmit = useCallback((e: any) => {
+    const submitData = e.formData;
+    if (!connected || !schema || !submitData) return;
     
     // Process onSubmit fields
     Object.keys(submitData).forEach(fieldName => {
@@ -82,8 +97,9 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
       if (sendMode === 'onSubmit') {
         sendFieldCommand(fieldName, fieldValue, fieldSchema);
       }
+      // Note: 'never' mode is handled in the onChange handler, not here
     });
-  }, [schema, formData, connected, onCommand]);
+  }, [schema, connected, sendFieldCommand]);
 
   // Cleanup timers on unmount
   React.useEffect(() => {
@@ -92,6 +108,26 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
     };
   }, []);
 
+  if (!schema) {
+    return (
+      <div className="no-schema">
+        <p>No form schema selected. Please create or select a schema.</p>
+      </div>
+    );
+  }
+
+  // Check if any fields need onSubmit mode
+  const hasOnSubmitFields = Object.values(schema.schema.properties || {}).some((fieldSchema: any) => {
+    const sendMode = getFieldSendMode(fieldSchema, schema.config.globalSendMode);
+    return sendMode === 'onSubmit';
+  });
+
+  // Create custom button templates that hide submit button when not needed
+  const conditionalButtonTemplates = {
+    ...CustomButtonTemplates,
+    SubmitButton: hasOnSubmitFields ? CustomButtonTemplates.SubmitButton : () => null
+  };
+
   return (
     <div className="dynamic-form-renderer">
       <Form
@@ -99,28 +135,23 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
         uiSchema={schema.uiSchema}
         formData={formData}
         onChange={handleFormChange}
-        onSubmit={handleSubmit}
+        onSubmit={hasOnSubmitFields ? handleSubmit : undefined}
+        validator={validator}
         templates={{
           FieldTemplate: CustomFieldTemplate,
           ObjectFieldTemplate: CustomObjectFieldTemplate,
           TitleFieldTemplate: CustomTitleField,
           BaseInputTemplate: CustomBaseInputTemplate,
-          ButtonTemplates: CustomButtonTemplates
+          ButtonTemplates: conditionalButtonTemplates
         }}
         widgets={customWidgets}
         showErrorList={false}
         liveValidate={false}
-      >
-        <div className="form-actions">
-          <button
-            type="submit"
-            className="submit-button"
-            disabled={!connected}
-          >
-            Send Commands
-          </button>
-        </div>
-      </Form>
+        formContext={{
+          customButtons: schema.config.customButtons,
+          onCommand: onCommand
+        }}
+      />
     </div>
   );
 }

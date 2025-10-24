@@ -11,6 +11,11 @@ export interface FormSchema {
 export interface FormConfig {
   globalSendMode: 'immediate' | 'debounced' | 'onSubmit';
   debounceMs?: number;
+  customButtons?: Array<{
+    id: string;
+    label: string;
+    command: string;
+  }>;
 }
 
 export interface FieldCommandConfig {

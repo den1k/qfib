@@ -6,28 +6,16 @@ export const defaultSchemas: FormSchema[] = [
     name: 'Movement Controls',
     schema: {
       type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          title: 'Action',
-          enum: ['open-slow', 'close-slow', 'open-fast', 'close-fast'],
-          enumNames: ['🐌 Open Slowly', '🐌 Close Slowly', '⚡ Open Fast', '⚡ Close Fast'],
-          'x-commandMap': {
-            'open-slow': 'smoothMove:angle=0;duration=3000',
-            'close-slow': 'smoothMove:angle=180;duration=3000',
-            'open-fast': 'smoothMove:angle=0;duration=100',
-            'close-fast': 'smoothMove:angle=180;duration=100'
-          }
-        }
-      }
-    },
-    uiSchema: {
-      action: {
-        'ui:widget': 'radio'
-      }
+      properties: {}
     },
     config: {
-      globalSendMode: 'onSubmit'
+      globalSendMode: 'immediate',
+      customButtons: [
+        { id: 'openSlow', label: '🐌 Open Slowly', command: 'smoothMove:angle=0;duration=3000' },
+        { id: 'closeSlow', label: '🐌 Close Slowly', command: 'smoothMove:angle=180;duration=3000' },
+        { id: 'openFast', label: '⚡ Open Fast', command: 'smoothMove:angle=0;duration=100' },
+        { id: 'closeFast', label: '⚡ Close Fast', command: 'smoothMove:angle=180;duration=100' }
+      ]
     }
   },
   {
@@ -49,20 +37,10 @@ export const defaultSchemas: FormSchema[] = [
         duration: {
           type: 'number',
           title: 'Duration (ms)',
-          minimum: 50,
-          maximum: 5000,
+          minimum: 100,
+          maximum: 10000,
           default: 1000,
-          'x-sendMode': 'debounced',
-          'x-debounceMs': 300
-        },
-        speed: {
-          type: 'number',
-          title: 'Speed',
-          minimum: 1,
-          maximum: 10,
-          default: 5,
-          'x-command': 'setSpeed:{speed}',
-          'x-sendMode': 'immediate'
+          'x-sendMode': 'never'
         }
       }
     },
@@ -71,9 +49,6 @@ export const defaultSchemas: FormSchema[] = [
         'ui:widget': 'range'
       },
       duration: {
-        'ui:widget': 'range'
-      },
-      speed: {
         'ui:widget': 'range'
       }
     },

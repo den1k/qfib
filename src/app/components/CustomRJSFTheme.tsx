@@ -1,5 +1,5 @@
 import React from 'react';
-import { FieldTemplateProps, ObjectFieldTemplateProps, TitleFieldProps, BaseInputTemplateProps, ButtonTemplates } from '@rjsf/utils';
+import { FieldTemplateProps, ObjectFieldTemplateProps, TitleFieldProps, BaseInputTemplateProps } from '@rjsf/utils';
 
 // Custom Field Template
 export function CustomFieldTemplate(props: FieldTemplateProps) {
@@ -27,13 +27,24 @@ export function CustomFieldTemplate(props: FieldTemplateProps) {
     return <div style={{ display: 'none' }}>{children}</div>;
   }
 
+  // Check if this is a range input field
+  const isRangeField = schema.type === 'number' && uiSchema?.['ui:widget'] === 'range';
+
   return (
     <div className={`field-wrapper ${classNames}`} style={style}>
-      {displayLabel && label && (
+      {displayLabel && label && !isRangeField && (
         <label htmlFor={id} className="field-label">
           {label}
           {required && <span className="required">*</span>}
         </label>
+      )}
+      {isRangeField && (
+        <div className="range-field-label">
+          <label htmlFor={id} className="field-label">
+            {label}
+            {required && <span className="required">*</span>}
+          </label>
+        </div>
       )}
       {rawDescription && (
         <div className="field-description">{rawDescription}</div>
@@ -67,8 +78,39 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
     schema,
     formData,
     onAddClick,
-    canAdd
+    formContext
   } = props;
+
+  // Special handling for schemas with custom buttons
+  if (formContext?.customButtons && formContext.customButtons.length > 0) {
+    return (
+      <div className="object-field movement-controls">
+        {title && (
+          <h3 className="object-title">{title}</h3>
+        )}
+        {description && (
+          <div className="object-description">{description}</div>
+        )}
+        <div className="movement-buttons">
+          {formContext.customButtons.map((button: any) => (
+            <button
+              key={button.id}
+              type="button"
+              className="movement-button"
+              onClick={() => {
+                if (formContext.onCommand) {
+                  formContext.onCommand(button.command);
+                }
+              }}
+              disabled={disabled || readonly}
+            >
+              {button.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="object-field">
@@ -81,16 +123,6 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
       <div className="object-properties">
         {properties.map((prop) => prop.content)}
       </div>
-      {canAdd && (
-        <button
-          type="button"
-          className="add-button"
-          onClick={onAddClick}
-          disabled={disabled || readonly}
-        >
-          Add Item
-        </button>
-      )}
     </div>
   );
 }
@@ -154,8 +186,8 @@ export function CustomBaseInputTemplate(props: BaseInputTemplateProps) {
 }
 
 // Custom Button Templates
-export const CustomButtonTemplates: ButtonTemplates = {
-  SubmitButton: (props) => (
+export const CustomButtonTemplates = {
+  SubmitButton: (props: any) => (
     <button
       type="submit"
       className="submit-button"
@@ -164,7 +196,7 @@ export const CustomButtonTemplates: ButtonTemplates = {
       {props.children || 'Submit'}
     </button>
   ),
-  AddButton: (props) => (
+  AddButton: (props: any) => (
     <button
       type="button"
       className="add-button"
@@ -174,7 +206,7 @@ export const CustomButtonTemplates: ButtonTemplates = {
       {props.children || 'Add'}
     </button>
   ),
-  RemoveButton: (props) => (
+  RemoveButton: (props: any) => (
     <button
       type="button"
       className="remove-button"
@@ -195,13 +227,43 @@ export const customWidgets = {
       type="text"
     />
   ),
-  TextareaWidget: (props: any) => (
-    <textarea
-      {...props}
-      className="textarea-widget"
-      rows={props.uiSchema?.['ui:options']?.rows || 3}
-    />
-  ),
+  TextareaWidget: (props: any) => {
+    const {
+      id,
+      value,
+      onChange,
+      onBlur,
+      onFocus,
+      disabled,
+      readonly,
+      placeholder,
+      autofocus,
+      uiSchema,
+      schema,
+      formContext,
+      rawErrors,
+      hideLabel,
+      hideError,
+      ...domProps
+    } = props;
+    
+    return (
+      <textarea
+        {...domProps}
+        id={id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur && ((e) => onBlur(id, e.target.value))}
+        onFocus={onFocus && ((e) => onFocus(id, e.target.value))}
+        disabled={disabled}
+        readOnly={readonly}
+        placeholder={placeholder}
+        autoFocus={autofocus}
+        className="textarea-widget"
+        rows={uiSchema?.['ui:options']?.rows || 3}
+      />
+    );
+  },
   SelectWidget: (props: any) => (
     <select
       {...props}
@@ -233,15 +295,31 @@ export const customWidgets = {
   ),
   RangeWidget: (props: any) => (
     <div className="range-widget">
+      <div className="range-label-row">
+        <span className="range-label">{props.label}</span>
+        <span className="range-value">{props.value}</span>
+      </div>
       <input
-        {...props}
         type="range"
         className="range-input"
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
         min={props.schema.minimum}
         max={props.schema.maximum}
         step={props.schema.multipleOf || 1}
+        disabled={props.disabled}
+        readOnly={props.readonly}
+        autoFocus={props.autofocus}
       />
-      <div className="range-value">{props.value}</div>
     </div>
+  ),
+  ButtonWidget: (props: any) => (
+    <button
+      type="button"
+      className="button-widget"
+      onClick={() => props.onChange(props.schema.title || 'Button Clicked')}
+    >
+      {props.uiSchema?.['ui:options']?.label || props.schema.title || 'Button'}
+    </button>
   )
 };

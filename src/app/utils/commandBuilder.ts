@@ -1,4 +1,4 @@
-import { ExtendedRJSFSchema, FormData, CommandMap } from '../types/formSchema';
+import { ExtendedRJSFSchema, FormData, CommandMap } from '../../types/formSchema';
 
 export function buildCommand(
   fieldSchema: ExtendedRJSFSchema,
@@ -56,7 +56,7 @@ function parseCommandTemplate(
 export function getFieldSendMode(
   fieldSchema: ExtendedRJSFSchema,
   globalSendMode: 'immediate' | 'debounced' | 'onSubmit'
-): 'immediate' | 'debounced' | 'onSubmit' {
+): 'immediate' | 'debounced' | 'onSubmit' | 'never' {
   return fieldSchema['x-sendMode'] || globalSendMode;
 }
 

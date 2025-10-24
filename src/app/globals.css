@@ -561,40 +561,190 @@ form {
   text-shadow: var(--terminal-text-shadow);
 }
 
+/* Range widget styling */
 .range-widget {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
+.range-field-label {
+  display: none;
+}
+
+.range-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 280px;
+  max-width: 100%;
+}
+
+.range-label {
+  color: var(--terminal-green);
+  font-weight: 500;
+  font-size: 11px;
+  text-shadow: var(--terminal-text-shadow);
+  width: 120px;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.range-value {
+  color: var(--terminal-green);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  text-shadow: var(--terminal-text-shadow);
+  opacity: 0.8;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 .range-input {
-  width: 100%;
+  width: 280px;
+  max-width: 100%;
   background: transparent;
   outline: none;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
 }
 
 .range-input::-webkit-slider-track {
-  background: var(--terminal-bg);
+  background: var(--terminal-green);
   border: 1px solid var(--terminal-green);
-  height: 8px;
+  height: 1px;
   border-radius: 0;
 }
 
 .range-input::-webkit-slider-thumb {
-  background: var(--terminal-green);
-  border: 1px solid var(--terminal-bg);
-  width: 16px;
-  height: 16px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-green);
+  width: 10px;
+  height: 10px;
   border-radius: 0;
   cursor: pointer;
-  box-shadow: 0 0 3px rgba(0, 255, 0, 0.5);
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.range-value {
-  text-align: center;
+.range-input::-webkit-slider-thumb:hover {
+  background: #333333;
+}
+
+.range-input::-webkit-slider-thumb:active {
+  background: #555555;
+}
+
+/* Firefox slider styling */
+.range-input::-moz-range-track {
+  background: var(--terminal-green);
+  border: 1px solid var(--terminal-green);
+  height: 1px;
+  border-radius: 0;
+}
+
+.range-input::-moz-range-thumb {
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-green);
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.range-input::-moz-range-thumb:hover {
+  background: #333333;
+}
+
+.range-input::-moz-range-thumb:active {
+  background: #555555;
+}
+
+.button-widget {
+  width: 100%;
+  background-color: var(--terminal-bg);
   color: var(--terminal-green);
-  font-size: 11px;
+  border: 1px solid var(--terminal-green);
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  margin: 4px 0;
   text-shadow: var(--terminal-text-shadow);
+  box-shadow: var(--terminal-border-glow);
+}
+
+.button-widget:hover {
+  background-color: var(--terminal-green);
+  color: var(--terminal-bg);
+  box-shadow: var(--terminal-glow);
+  text-shadow: none;
+}
+
+.button-widget:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+}
+
+/* Movement Controls Special Styling */
+.movement-controls {
+  padding: 8px;
+}
+
+.movement-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.movement-button {
+  background-color: var(--terminal-bg);
+  color: var(--terminal-green);
+  border: 1px solid var(--terminal-green);
+  padding: 4px 8px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  text-shadow: var(--terminal-text-shadow);
+  box-shadow: var(--terminal-border-glow);
+  border-radius: 2px;
+  width: auto;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.movement-button:hover {
+  background-color: var(--terminal-green);
+  color: var(--terminal-bg);
+  box-shadow: var(--terminal-glow);
+  text-shadow: none;
+}
+
+.movement-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+}
+
+.movement-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.movement-button:disabled:hover {
+  background-color: var(--terminal-bg);
+  color: var(--terminal-green);
 }
 
 .submit-button, .add-button, .remove-button {

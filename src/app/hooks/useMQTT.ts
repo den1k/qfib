@@ -107,7 +107,7 @@ export const useMQTT = () => {
   }, [client]);
 
   const publishCommand = useCallback((command: string) => {
-    if (client && isConnected) {
+    if (client) {
       client.publish(config.commandTopic, command, (err) => {
         if (err) {
           console.error('Failed to publish command:', err);
@@ -119,7 +119,7 @@ export const useMQTT = () => {
     } else {
       setError('Not connected to MQTT broker');
     }
-  }, [client, isConnected, config.commandTopic]);
+  }, [client, config.commandTopic]);
 
   const sendServoCommand = useCallback((command: 'up' | 'down' | 'left' | 'right' | string) => {
     publishCommand(command);

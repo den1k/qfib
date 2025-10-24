@@ -27,6 +27,7 @@ export default function Home() {
     connect: connectMQTT,
     disconnect: disconnectMQTT,
     sendServoCommand: sendMQTTCommand,
+    publishCommand: publishMQTTCommand,
     clearMessages: clearMQTTMessages
   } = useMQTT();
 
@@ -54,16 +55,32 @@ export default function Home() {
     }
   }, [schemas.length, saveSchema]);
 
+  // Temporary: Clear old schemas and reload defaults (remove this after first run)
+  useEffect(() => {
+    const hasOldSpeedSchema = schemas.some(schema => 
+      schema.id === 'advanced-controls' && 
+      schema.schema.properties && 
+      schema.schema.properties.speed
+    );
+    
+    if (hasOldSpeedSchema) {
+      console.log('Clearing old schemas with speed field...');
+      localStorage.removeItem('esp32-form-schemas');
+      localStorage.removeItem('esp32-active-schema');
+      window.location.reload();
+    }
+  }, [schemas]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Unified command sender
   const sendCommand = (command: string) => {
-    if (activeMode === 'ble' && bleConnected) {
+    if (activeMode === 'ble') {
       sendBLECommand(command);
-    } else if (activeMode === 'mqtt' && mqttConnected) {
-      sendMQTTCommand(command as any);
+    } else if (activeMode === 'mqtt') {
+      publishMQTTCommand(command);
     }
   };
 
