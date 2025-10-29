@@ -26,11 +26,11 @@ export const useMQTT = () => {
   const [error, setError] = useState<string | null>(null);
 
   const config: MQTTConfig = {
-    brokerUrl: process.env.MQTT_BROKER_URL || 'wss://broker.emqx.io:8084/mqtt',
-    username: process.env.MQTT_USERNAME || 'spark_gate_esp32',
-    password: process.env.MQTT_PASSWORD || 'eh8W6N7.Rzj@P-!',
-    commandTopic: process.env.MQTT_COMMAND_TOPIC || 'spark_gate/command',
-    statusTopic: process.env.MQTT_STATUS_TOPIC || 'spark_gate/status',
+    brokerUrl: process.env.NEXT_PUBLIC_MQTT_BROKER_URL!,
+    username: process.env.NEXT_PUBLIC_MQTT_USERNAME!,
+    password: process.env.NEXT_PUBLIC_MQTT_PASSWORD!,
+    commandTopic: process.env.NEXT_PUBLIC_MQTT_COMMAND_TOPIC!,
+    statusTopic: process.env.NEXT_PUBLIC_MQTT_STATUS_TOPIC!,
     clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`
   };
 

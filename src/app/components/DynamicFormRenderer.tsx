@@ -22,7 +22,6 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
     
     const command = buildCommand(fieldSchema, formData, fieldName, fieldValue);
     if (command) {
-      console.log(`Sending command for ${fieldName}:`, command);
       onCommand(command);
     }
   }, [connected, formData, onCommand]);
@@ -44,8 +43,6 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
     const changedFields = Object.keys(newFormData).filter(fieldName => {
       return newFormData[fieldName] !== previousFormData[fieldName];
     });
-    
-    console.log('Changed fields:', changedFields);
     
     // Only process fields that actually changed
     changedFields.forEach(fieldName => {

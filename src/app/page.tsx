@@ -131,296 +131,231 @@ export default function Home() {
   );
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto h-full grid grid-rows-[auto_1fr] gap-4">
-        {/* Fixed Header Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="retro-title">qfib</h1>
+    <div className="min-h-screen p-2">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <h1 className="retro-title mb-4">qfib</h1>
+        
+        {/* Divider */}
+        <div className="border-t border-green-500 mb-4"></div>
+        
+        {/* Connection Section */}
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold mb-3 uppercase tracking-wider">Connection</h2>
           
           {/* Mode Selection */}
-          <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg">
+          <div className="flex gap-2 mb-3">
             <button
               onClick={() => setActiveMode('ble')}
               className={`mode-button ${activeMode === 'ble' ? 'active' : ''}`}
             >
-              <span className="flex items-center justify-center gap-2">
-                📱 <span className="font-semibold">BLE Mode</span>
-              </span>
+              📱 BLE MODE
             </button>
             <button
               onClick={() => setActiveMode('mqtt')}
               className={`mode-button ${activeMode === 'mqtt' ? 'active' : ''}`}
             >
-              <span className="flex items-center justify-center gap-2">
-                🌐 <span className="font-semibold">MQTT Mode</span>
-              </span>
+              🌐 MQTT MODE
             </button>
           </div>
 
           {/* Connection Status */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-              activeMode === 'ble' 
-                ? (bleConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
-                : (mqttConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
-            }`}>
-              {activeMode === 'ble' 
-                ? (bleConnected ? '🟢 BLE Connected' : '🔴 BLE Disconnected')
-                : (mqttConnected ? '🟢 MQTT Connected' : '🔴 MQTT Disconnected')
-              }
-            </div>
-            
+          <div className="mb-3 text-sm">
+            {activeMode === 'ble' 
+              ? (bleConnected ? '🟢 BLE Connected' : '🔴 BLE Disconnected')
+              : (mqttConnected ? '🟢 MQTT Connected' : '🔴 MQTT Disconnected')
+            }
             {(bleError || mqttError) && (
-              <div className="px-4 py-2 bg-red-100 text-red-800 rounded-full text-sm">
+              <div className="text-red-500 mt-1">
                 Error: {activeMode === 'ble' ? bleError : mqttError}
               </div>
             )}
           </div>
 
           {/* Connection Controls */}
-          <div className="flex gap-4">
+          <div className="flex gap-2">
             {activeMode === 'ble' ? (
               <>
-                <button
-                  onClick={connectBLE}
-                  disabled={bleConnected}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    bleConnected
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  Connect BLE
+                <button onClick={connectBLE} disabled={bleConnected}>
+                  CONNECT BLE
                 </button>
-                
-                <button
-                  onClick={disconnectBLE}
-                  disabled={!bleConnected}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    !bleConnected
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
-                >
-                  Disconnect BLE
+                <button onClick={disconnectBLE} disabled={!bleConnected}>
+                  DISCONNECT BLE
                 </button>
               </>
             ) : (
               <>
-                <button
-                  onClick={connectMQTT}
-                  disabled={mqttConnected}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    mqttConnected
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  Connect MQTT
+                <button onClick={connectMQTT} disabled={mqttConnected}>
+                  CONNECT MQTT
                 </button>
-                
-                <button
-                  onClick={disconnectMQTT}
-                  disabled={!mqttConnected}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    !mqttConnected
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
-                >
-                  Disconnect MQTT
+                <button onClick={disconnectMQTT} disabled={!mqttConnected}>
+                  DISCONNECT MQTT
                 </button>
               </>
             )}
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-          {/* Left Column - Controls */}
-          <div className="lg:col-span-1 overflow-y-auto min-h-0">
-          {/* Provisioning Section (BLE Only) */}
-          {activeMode === 'ble' && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">WiFi Provisioning</h2>
-              <form onSubmit={handleProvision} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                  <label htmlFor="ssid" className="block text-sm font-medium text-gray-700 mb-2">
-                    WiFi SSID
-                  </label>
-              <input
-                type="text"
-                    id="ssid"
-                value={ssid}
-                onChange={(e) => setSsid(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter WiFi SSID"
-              />
-            </div>
-            <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    WiFi Password
-                  </label>
-              <input
-                type="password"
-                    id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter WiFi password"
-              />
-            </div>
-            <button
-              type="submit"
-                  disabled={!bleConnected || !ssid || !password}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    !bleConnected || !ssid || !password
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
-                  }`}
-                >
-                  Provision ESP32
-            </button>
-          </form>
-              {provisionSent && (
-                <div className="mt-4 p-3 bg-blue-100 text-blue-800 rounded-lg">
-                  Provisioning command sent! The ESP32 will reboot and connect to WiFi.
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Dynamic Form Controls */}
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Controls</h2>
-                <div className="flex gap-2">
-                  {schemas.length > 1 && (
-                    <select
-                      value={activeSchema?.id || ''}
-                      onChange={(e) => setActiveSchema(e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm"
-                    >
-                      {schemas.map(schema => (
-                        <option key={schema.id} value={schema.id}>
-                          {schema.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <button
-                    onClick={() => setShowSchemaEditor(!showSchemaEditor)}
-                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                  >
-                    {showSchemaEditor ? 'Hide Editor' : 'Edit Schema'}
-                  </button>
-                </div>
+        {/* WiFi Provisioning Section (BLE Only) */}
+        {activeMode === 'ble' && (
+          <div className="mb-4 mt-4">
+            <h3 className="text-sm font-semibold mb-2 uppercase tracking-wider opacity-80">WiFi Provisioning</h3>
+            
+            <form onSubmit={handleProvision} className="space-y-2">
+              <div>
+                <label htmlFor="ssid" className="block text-xs mb-1">
+                  SSID
+                </label>
+                <input
+                  type="text"
+                  id="ssid"
+                  value={ssid}
+                  onChange={(e) => setSsid(e.target.value)}
+                  className="w-full px-2 py-1 text-sm"
+                  placeholder="WiFi network name"
+                />
               </div>
-              
-              {showSchemaEditor ? (
-                <SchemaEditor
-                  onSave={handleSchemaSave}
-                  currentSchema={activeSchema}
+              <div>
+                <label htmlFor="password" className="block text-xs mb-1">
+                  PASSWORD
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-2 py-1 text-sm"
+                  placeholder="WiFi password"
                 />
-              ) : (
-                <DynamicFormRenderer
-                  schema={activeSchema}
-                  connected={activeMode === 'ble' ? bleConnected : mqttConnected}
-                  onCommand={sendCommand}
-                />
-              )}
-            </div>
+              </div>
+              <button
+                type="submit"
+                disabled={!bleConnected || !ssid || !password}
+              >
+                PROVISION ESP32
+              </button>
+            </form>
+            
+            {provisionSent && (
+              <div className="mt-2 text-xs opacity-80">
+                ✓ Provisioning command sent! ESP32 will reboot and connect to WiFi.
+              </div>
+            )}
           </div>
+        )}
 
-          {/* Custom Command Input */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Custom Command</h2>
-            <form onSubmit={handleSend} className="flex gap-4">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter custom command (e.g., 'up', 'down', '90')"
-            />
+        {/* Divider */}
+        <div className="border-t border-green-500 mb-4"></div>
+
+        {/* Control Section */}
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold mb-3 uppercase tracking-wider">Control</h2>
+          
+          <div className="flex gap-2 items-center mb-2">
+            {schemas.length > 1 && (
+              <select
+                value={activeSchema?.id || ''}
+                onChange={(e) => setActiveSchema(e.target.value)}
+                className="text-xs"
+                style={{ 
+                  height: '24px', 
+                  padding: '2px 20px 2px 4px',
+                  lineHeight: '20px'
+                }}
+              >
+                {schemas.map(schema => (
+                  <option key={schema.id} value={schema.id}>
+                    {schema.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
-              type="submit"
-                disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  (activeMode === 'ble' ? !bleConnected : !mqttConnected)
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
+              onClick={() => setShowSchemaEditor(!showSchemaEditor)}
+              className="text-xs px-2 py-1"
+              style={{ height: '24px' }}
             >
-              Send
+              {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT SCHEMA'}
             </button>
-          </form>
           </div>
-          </div>
+          
+          {showSchemaEditor ? (
+            <SchemaEditor
+              onSave={handleSchemaSave}
+              currentSchema={activeSchema}
+            />
+          ) : (
+            <DynamicFormRenderer
+              schema={activeSchema}
+              connected={activeMode === 'ble' ? bleConnected : mqttConnected}
+              onCommand={sendCommand}
+            />
+          )}
+        </div>
 
-          {/* Right Column - Messages */}
-          <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6 flex flex-col min-h-0">
-          <div className="flex justify-between items-center mb-4 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-800">Messages</h2>
+        {/* Divider */}
+        <div className="border-t border-green-500 mb-4"></div>
+
+        {/* Messages Section */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold uppercase tracking-wider">Messages</h2>
             <button
               onClick={clearAllMessages}
               disabled={allMessages.length === 0}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                allMessages.length === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-red-600 text-white hover:bg-red-700'
-              }`}
+              className="text-xs"
             >
-              🗑️ Clear Messages
+              🗑️ CLEAR
             </button>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 flex-1 min-h-0 overflow-y-auto messages-container">
-            {allMessages.length === 0 ? (
-              <p className="text-gray-500 text-center">No messages yet...</p>
-            ) : (
-              allMessages.map((msg, index) => (
-                <div key={index}>
-                  {index > 0 && (
-                    <div className="flex items-center my-3">
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                    </div>
-                  )}
-                  <div className={`p-3 rounded-lg border-l-4 shadow-sm ${
-                    msg.source === 'ble' ? 'border-blue-500 bg-blue-50' : 'border-green-500 bg-green-50'
-                  }`}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">
-                          <span className="text-xs text-gray-500 mr-2">
-                            <span className="text-gray-400">&gt; </span>
-                            {new Date(msg.timestamp).toLocaleTimeString()}
-                          </span>
-                          {' '}
-                          {msg.source === 'ble' ? '📱 BLE' : '🌐 MQTT'}: {msg.topic || 'Command'}
-                        </span>
-                        <div 
-                          className="text-gray-800 font-mono text-sm leading-relaxed"
-                          style={{ 
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
-                            fontFamily: 'JetBrains Mono, Courier New, monospace'
-                          }}
-                        >
-                          {msg.message}
-                        </div>
-                      </div>
+          
+          <div className="border border-green-500 flex flex-col" style={{ height: '300px' }}>
+            {/* Messages Display */}
+            <div className="flex-1 overflow-y-auto messages-container p-2">
+              {allMessages.length === 0 ? (
+                <p className="text-sm opacity-70">No messages yet...</p>
+              ) : (
+                allMessages.map((msg, index) => (
+                  <div key={index} className="text-xs mb-1">
+                    <span className="opacity-70">
+                      &gt; {new Date(msg.timestamp).toLocaleTimeString()}
+                    </span>
+                    {' '}
+                    {msg.source === 'ble' ? '📱 BLE' : '🌐 MQTT'}: {msg.topic || 'Command'}
+                    <div className="ml-4 whitespace-pre-wrap break-words">
+                      {msg.message}
                     </div>
                   </div>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            
+            {/* Command Input at Bottom */}
+            <div className="border-t border-green-500">
+              <form onSubmit={handleSend} className="flex">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  className="flex-1 px-2 py-1 bg-black text-green-500 text-sm border-0"
+                  placeholder="Enter command..."
+                  style={{ outline: 'none' }}
+                />
+                <button
+                  type="submit"
+                  disabled={activeMode === 'ble' ? !bleConnected : !mqttConnected}
+                  className="text-xs px-3"
+                  style={{ margin: 0, borderLeft: '1px solid var(--terminal-green)' }}
+                >
+                  SEND
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

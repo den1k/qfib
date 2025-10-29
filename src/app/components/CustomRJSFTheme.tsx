@@ -220,13 +220,43 @@ export const CustomButtonTemplates = {
 
 // Custom widgets for specific input types
 export const customWidgets = {
-  TextWidget: (props: any) => (
-    <input
-      {...props}
-      className="text-widget"
-      type="text"
-    />
-  ),
+  TextWidget: (props: any) => {
+    const {
+      id,
+      value,
+      onChange,
+      onBlur,
+      onFocus,
+      disabled,
+      readonly,
+      placeholder,
+      autofocus,
+      uiSchema,
+      schema,
+      formContext,
+      rawErrors,
+      hideLabel,
+      hideError,
+      ...domProps
+    } = props;
+    
+    return (
+      <input
+        {...domProps}
+        id={id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur && ((e) => onBlur(id, e.target.value))}
+        onFocus={onFocus && ((e) => onFocus(id, e.target.value))}
+        disabled={disabled}
+        readOnly={readonly}
+        placeholder={placeholder}
+        autoFocus={autofocus}
+        className="text-widget"
+        type="text"
+      />
+    );
+  },
   TextareaWidget: (props: any) => {
     const {
       id,

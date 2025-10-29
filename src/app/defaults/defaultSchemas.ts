@@ -73,10 +73,8 @@ export const defaultSchemas: FormSchema[] = [
     },
     uiSchema: {
       command: {
-        'ui:widget': 'textarea',
-        'ui:options': {
-          rows: 3
-        }
+        'ui:widget': 'text',
+        'ui:placeholder': 'Enter command...'
       }
     },
     config: {
