@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
       unoptimized: true,
     },
   }),
+  // Webpack configuration for better file watching
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        poll: 1000, // Check for changes every second
+        aggregateTimeout: 300, // Delay before rebuilding
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

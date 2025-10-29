@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FormSchema } from '../../types/formSchema';
 
 const STORAGE_KEY = 'esp32-form-schemas';
@@ -43,7 +43,7 @@ export function useFormSchema() {
     }
   }, [activeSchemaId]);
 
-  const saveSchema = (schema: FormSchema) => {
+  const saveSchema = useCallback((schema: FormSchema) => {
     setSchemas(prev => {
       const existingIndex = prev.findIndex(s => s.id === schema.id);
       if (existingIndex >= 0) {
@@ -54,7 +54,7 @@ export function useFormSchema() {
         return [...prev, schema];
       }
     });
-  };
+  }, []);
 
   const deleteSchema = (id: string) => {
     setSchemas(prev => prev.filter(s => s.id !== id));

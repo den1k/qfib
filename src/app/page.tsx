@@ -53,23 +53,8 @@ export default function Home() {
     if (schemas.length === 0) {
       defaultSchemas.forEach(schema => saveSchema(schema));
     }
-  }, [schemas.length, saveSchema]);
-
-  // Temporary: Clear old schemas and reload defaults (remove this after first run)
-  useEffect(() => {
-    const hasOldSpeedSchema = schemas.some(schema => 
-      schema.id === 'advanced-controls' && 
-      schema.schema.properties && 
-      schema.schema.properties.speed
-    );
-    
-    if (hasOldSpeedSchema) {
-      console.log('Clearing old schemas with speed field...');
-      localStorage.removeItem('esp32-form-schemas');
-      localStorage.removeItem('esp32-active-schema');
-      window.location.reload();
-    }
-  }, [schemas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemas.length]); // Only depend on schemas.length to avoid unnecessary re-runs
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -134,7 +119,7 @@ export default function Home() {
     <div className="min-h-screen p-2">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <h1 className="retro-title mb-4">qfib</h1>
+        <h1 className="retro-title mb-4">fiBLE</h1>
         
         {/* Divider */}
         <div className="border-t border-green-500 mb-4"></div>

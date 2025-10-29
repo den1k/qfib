@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "deploy": "npm run build && netlify deploy --prod --dir=out"

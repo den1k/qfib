@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import mqtt from 'mqtt';
 
 interface MQTTConfig {
@@ -24,15 +24,18 @@ export const useMQTT = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<MQTTMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const hasAutoConnectedRef = useRef(false);
+  const clientRef = useRef<mqtt.MqttClient | null>(null);
 
-  const config: MQTTConfig = {
+  // Memoize config to prevent recreation on every render
+  const config: MQTTConfig = useMemo(() => ({
     brokerUrl: process.env.NEXT_PUBLIC_MQTT_BROKER_URL!,
     username: process.env.NEXT_PUBLIC_MQTT_USERNAME!,
     password: process.env.NEXT_PUBLIC_MQTT_PASSWORD!,
     commandTopic: process.env.NEXT_PUBLIC_MQTT_COMMAND_TOPIC!,
     statusTopic: process.env.NEXT_PUBLIC_MQTT_STATUS_TOPIC!,
     clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`
-  };
+  }), []);
 
   const connect = useCallback(() => {
     try {
@@ -91,6 +94,7 @@ export const useMQTT = () => {
         setIsConnected(false);
       });
 
+      clientRef.current = mqttClient;
       setClient(mqttClient);
     } catch (err) {
       console.error('Failed to create MQTT client:', err);
@@ -99,12 +103,14 @@ export const useMQTT = () => {
   }, [config]);
 
   const disconnect = useCallback(() => {
-    if (client) {
-      client.end();
+    const currentClient = clientRef.current;
+    if (currentClient) {
+      currentClient.end();
+      clientRef.current = null;
       setClient(null);
       setIsConnected(false);
     }
-  }, [client]);
+  }, []);
 
   const publishCommand = useCallback((command: string) => {
     if (client) {
@@ -137,16 +143,18 @@ export const useMQTT = () => {
     setMessages([]);
   }, []);
 
-  // Auto-connect on mount
+  // Auto-connect on mount (only once)
   useEffect(() => {
-    connect();
+    // Only auto-connect if we haven't already and no client exists
+    if (!hasAutoConnectedRef.current && !clientRef.current) {
+      hasAutoConnectedRef.current = true;
+      connect();
+    }
     
-    return () => {
-      if (client) {
-        client.end();
-      }
-    };
-  }, []); // Empty dependency array means this runs once on mount
+    // No cleanup function - let React Fast Refresh handle HMR
+    // The disconnect function is available if needed manually
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   return {
     isConnected,
