@@ -119,6 +119,7 @@ export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorP
                   return (
                     <DynamicFormRenderer
                       schema={schema}
+                      connected
                       onCommand={onCommand || (() => console.log('Preview mode - command not sent'))}
                     />
                   );
