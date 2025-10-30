@@ -19,7 +19,11 @@ interface MQTTMessage {
   source: 'mqtt';
 }
 
-export const useMQTT = () => {
+interface UseMQTTOptions {
+  onResponse?: (message: string) => void;
+}
+
+export const useMQTT = (options?: UseMQTTOptions) => {
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<MQTTMessage[]>([]);
@@ -67,15 +71,21 @@ export const useMQTT = () => {
       });
 
       mqttClient.on('message', (topic, message) => {
+        const messageStr = message.toString();
         const msg: MQTTMessage = {
           topic,
-          message: message.toString(),
+          message: messageStr,
           timestamp: new Date(),
           source: 'mqtt'
         };
         
         console.log(`Received: ${msg.message} on topic ${topic}`);
         setMessages(prev => [...prev.slice(-9), msg]); // Keep last 10 messages
+        
+        // Call response handler if provided
+        if (options?.onResponse) {
+          options.onResponse(messageStr);
+        }
       });
 
       mqttClient.on('error', (err) => {

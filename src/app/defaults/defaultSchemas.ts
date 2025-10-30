@@ -11,10 +11,14 @@ export const defaultSchemas: FormSchema[] = [
     config: {
       globalSendMode: 'immediate',
       customButtons: [
-        { id: 'openSlow', label: '🐌 Open Slowly', command: 'smoothMove:angle=0;duration=3000' },
-        { id: 'closeSlow', label: '🐌 Close Slowly', command: 'smoothMove:angle=180;duration=3000' },
-        { id: 'openFast', label: '⚡ Open Fast', command: 'smoothMove:angle=0;duration=100' },
-        { id: 'closeFast', label: '⚡ Close Fast', command: 'smoothMove:angle=180;duration=100' }
+        { id: 'servo1-openSlow', label: '🐌 Open Slowly', command: 'smoothMove:angle=0;duration=3000;servo=1', group: 'Servo 1' },
+        { id: 'servo1-closeSlow', label: '🐌 Close Slowly', command: 'smoothMove:angle=180;duration=3000;servo=1', group: 'Servo 1' },
+        { id: 'servo1-openFast', label: '⚡ Open Fast', command: 'smoothMove:angle=0;duration=100;servo=1', group: 'Servo 1' },
+        { id: 'servo1-closeFast', label: '⚡ Close Fast', command: 'smoothMove:angle=180;duration=100;servo=1', group: 'Servo 1' },
+        { id: 'servo2-openSlow', label: '🐌 Open Slowly', command: 'smoothMove:angle=0;duration=3000;servo=2', group: 'Servo 2' },
+        { id: 'servo2-closeSlow', label: '🐌 Close Slowly', command: 'smoothMove:angle=180;duration=3000;servo=2', group: 'Servo 2' },
+        { id: 'servo2-openFast', label: '⚡ Open Fast', command: 'smoothMove:angle=0;duration=100;servo=2', group: 'Servo 2' },
+        { id: 'servo2-closeFast', label: '⚡ Close Fast', command: 'smoothMove:angle=180;duration=100;servo=2', group: 'Servo 2' }
       ]
     }
   },
@@ -24,13 +28,90 @@ export const defaultSchemas: FormSchema[] = [
     schema: {
       type: 'object',
       properties: {
-        angle: {
+        angle1: {
           type: 'number',
-          title: 'Angle',
+          title: 'Servo 1: Angle',
           minimum: 0,
           maximum: 180,
           default: 90,
-          'x-command': 'smoothMove:angle={angle};duration={duration}',
+          'x-command': 'smoothMove:angle={angle1};duration={duration1};servo=1',
+          'x-sendMode': 'debounced',
+          'x-debounceMs': 300,
+          'x-group': 'Servo 1'
+        },
+        duration1: {
+          type: 'number',
+          title: 'Servo 1: Duration (ms)',
+          minimum: 100,
+          maximum: 10000,
+          default: 1000,
+          'x-sendMode': 'never',
+          'x-group': 'Servo 1'
+        },
+        angle2: {
+          type: 'number',
+          title: 'Servo 2: Angle',
+          minimum: 0,
+          maximum: 180,
+          default: 90,
+          'x-command': 'smoothMove:angle={angle2};duration={duration2};servo=2',
+          'x-sendMode': 'debounced',
+          'x-debounceMs': 300,
+          'x-group': 'Servo 2'
+        },
+        duration2: {
+          type: 'number',
+          title: 'Servo 2: Duration (ms)',
+          minimum: 100,
+          maximum: 10000,
+          default: 1000,
+          'x-sendMode': 'never',
+          'x-group': 'Servo 2'
+        }
+      }
+    },
+    uiSchema: {
+      angle1: {
+        'ui:widget': 'range'
+      },
+      duration1: {
+        'ui:widget': 'range'
+      },
+      angle2: {
+        'ui:widget': 'range'
+      },
+      duration2: {
+        'ui:widget': 'range'
+      }
+    },
+    config: {
+      globalSendMode: 'debounced',
+      debounceMs: 300
+    }
+  },
+  {
+    id: 'dual-servo-controls',
+    name: 'Dual Servo Controls',
+    schema: {
+      type: 'object',
+      properties: {
+        angle1: {
+          type: 'number',
+          title: 'Servo 1 Angle',
+          minimum: 0,
+          maximum: 180,
+          default: 90,
+          'x-command': 'smoothMove:angle={angle1};duration={duration};servo=1',
+          'x-sendMode': 'debounced',
+          'x-debounceMs': 300
+        },
+        angle2: {
+          type: 'number',
+          title: 'Servo 2 Angle',
+          minimum: 0,
+          maximum: 180,
+          default: 90,
+          'x-command': 'smoothMove:angle={angle2};duration={duration};servo=2',
           'x-sendMode': 'debounced',
           'x-debounceMs': 300
         },
@@ -45,7 +126,10 @@ export const defaultSchemas: FormSchema[] = [
       }
     },
     uiSchema: {
-      angle: {
+      angle1: {
+        'ui:widget': 'range'
+      },
+      angle2: {
         'ui:widget': 'range'
       },
       duration: {

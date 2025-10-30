@@ -15,6 +15,7 @@ export interface FormConfig {
     id: string;
     label: string;
     command: string;
+    group?: string;
   }>;
 }
 
@@ -30,9 +31,10 @@ export interface CommandMap {
 
 export interface ExtendedRJSFSchema extends RJSFSchema {
   'x-command'?: string;
-  'x-sendMode'?: 'immediate' | 'debounced' | 'onSubmit';
+  'x-sendMode'?: 'immediate' | 'debounced' | 'onSubmit' | 'never';
   'x-debounceMs'?: number;
   'x-commandMap'?: CommandMap;
+  'x-group'?: string;
 }
 
 export interface FormData {

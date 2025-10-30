@@ -27,7 +27,7 @@ export function CustomFieldTemplate(props: FieldTemplateProps) {
     return <div style={{ display: 'none' }}>{children}</div>;
   }
 
-  // Check if this is a range input field
+  // Check if this is a range input field (don't show label as it's handled in the widget)
   const isRangeField = schema.type === 'number' && uiSchema?.['ui:widget'] === 'range';
 
   return (
@@ -37,14 +37,6 @@ export function CustomFieldTemplate(props: FieldTemplateProps) {
           {label}
           {required && <span className="required">*</span>}
         </label>
-      )}
-      {isRangeField && (
-        <div className="range-field-label">
-          <label htmlFor={id} className="field-label">
-            {label}
-            {required && <span className="required">*</span>}
-          </label>
-        </div>
       )}
       {rawDescription && (
         <div className="field-description">{rawDescription}</div>
@@ -83,6 +75,16 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
 
   // Special handling for schemas with custom buttons
   if (formContext?.customButtons && formContext.customButtons.length > 0) {
+    // Group buttons by their group property
+    const buttonGroups = formContext.customButtons.reduce((groups: any, button: any) => {
+      const groupName = button.group || 'Default';
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(button);
+      return groups;
+    }, {});
+
     return (
       <div className="object-field movement-controls">
         {title && (
@@ -91,23 +93,82 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
         {description && (
           <div className="object-description">{description}</div>
         )}
-        <div className="movement-buttons">
-          {formContext.customButtons.map((button: any) => (
-            <button
-              key={button.id}
-              type="button"
-              className="movement-button"
-              onClick={() => {
-                if (formContext.onCommand) {
-                  formContext.onCommand(button.command);
-                }
-              }}
-              disabled={disabled || readonly}
-            >
-              {button.label}
-            </button>
-          ))}
-        </div>
+        {Object.entries(buttonGroups).map(([groupName, buttons]: [string, any]) => (
+          <div key={groupName} className="mb-4 last:mb-0">
+            <h4 className="text-xs font-semibold uppercase tracking-wider mb-2 opacity-80">
+              {groupName}
+            </h4>
+            <div className="movement-buttons">
+              {buttons.map((button: any) => (
+                <button
+                  key={button.id}
+                  type="button"
+                  className="movement-button"
+                  onClick={() => {
+                    if (formContext.onCommand) {
+                      formContext.onCommand(button.command);
+                    }
+                  }}
+                  disabled={disabled || readonly}
+                >
+                  {button.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Check if properties have groups defined
+  const hasGroups = properties.some((prop) => {
+    const propSchema = schema.properties?.[prop.name];
+    return propSchema && propSchema['x-group'];
+  });
+
+  if (hasGroups) {
+    // Group properties by their x-group
+    const propertyGroups: { [key: string]: any[] } = {};
+    const ungroupedProps: any[] = [];
+
+    properties.forEach((prop) => {
+      const propSchema = schema.properties?.[prop.name];
+      const groupName = propSchema?.['x-group'];
+      
+      if (groupName) {
+        if (!propertyGroups[groupName]) {
+          propertyGroups[groupName] = [];
+        }
+        propertyGroups[groupName].push(prop);
+      } else {
+        ungroupedProps.push(prop);
+      }
+    });
+
+    return (
+      <div className="object-field">
+        {title && (
+          <h3 className="object-title">{title}</h3>
+        )}
+        {description && (
+          <div className="object-description">{description}</div>
+        )}
+        {ungroupedProps.length > 0 && (
+          <div className="object-properties mb-4">
+            {ungroupedProps.map((prop) => prop.content)}
+          </div>
+        )}
+        {Object.entries(propertyGroups).map(([groupName, groupProps]) => (
+          <div key={groupName} className="mb-6 last:mb-0">
+            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">
+              {groupName}
+            </h4>
+            <div className="object-properties">
+              {groupProps.map((prop) => prop.content)}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -296,7 +357,11 @@ export const customWidgets = {
   },
   SelectWidget: (props: any) => (
     <select
-      {...props}
+      id={props.id}
+      value={props.value}
+      onChange={(e) => props.onChange(e.target.value)}
+      disabled={props.disabled || props.readonly}
+      autoFocus={props.autofocus}
       className="select-widget"
     >
       {props.options.enumOptions?.map((option: any) => (
@@ -324,10 +389,10 @@ export const customWidgets = {
     </div>
   ),
   RangeWidget: (props: any) => (
-    <div className="range-widget">
-      <div className="range-label-row">
-        <span className="range-label">{props.label}</span>
-        <span className="range-value">{props.value}</span>
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between w-full max-w-[280px]">
+        <span className="text-[11px] font-medium uppercase tracking-wide">{props.label}</span>
+        <span className="text-[11px] font-medium opacity-70">{props.value}</span>
       </div>
       <input
         type="range"

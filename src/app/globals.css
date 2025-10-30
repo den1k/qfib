@@ -238,38 +238,6 @@ button:disabled {
 }
 
 /* Range Input Styling */
-.range-widget {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.range-label-row {
-  display: flex;
-  justify-content: space-between;
-  width: 280px;
-  max-width: 100%;
-}
-
-.range-label {
-  color: var(--terminal-green);
-  font-weight: 500;
-  font-size: 11px;
-  text-shadow: var(--terminal-text-shadow);
-  width: 120px;
-  text-align: left;
-}
-
-.range-value {
-  color: var(--terminal-green);
-  font-size: 11px;
-  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
-  text-shadow: var(--terminal-text-shadow);
-  opacity: 0.8;
-  width: 30px;
-  text-align: right;
-}
-
 .range-input {
   width: 280px;
   max-width: 100%;

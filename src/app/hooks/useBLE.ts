@@ -23,7 +23,11 @@ interface BLEMessage {
   topic?: string;
 }
 
-export const useBLE = () => {
+interface UseBLEOptions {
+  onResponse?: (message: string) => void;
+}
+
+export const useBLE = (options?: UseBLEOptions) => {
   const [connected, setConnected] = useState(false);
   const [device, setDevice] = useState<BLEDevice | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +132,11 @@ export const useBLE = () => {
         };
         
         setMessages(prev => [...prev.slice(-9), bleMessage]);
+        
+        // Call response handler if provided
+        if (options?.onResponse) {
+          options.onResponse(message);
+        }
       });
 
       const bleService: BLEService = {

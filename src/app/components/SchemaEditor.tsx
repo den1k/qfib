@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FormSchema } from '../../types/formSchema';
 import { defaultSchemas } from '../defaults/defaultSchemas';
+import { DynamicFormRenderer } from './DynamicFormRenderer';
 
 interface SchemaEditorProps {
   onSave: (schema: FormSchema) => void;
   currentSchema: FormSchema | null;
+  onCommand?: (command: string) => void;
 }
 
-export function SchemaEditor({ onSave, currentSchema }: SchemaEditorProps) {
+export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorProps) {
   const [jsonText, setJsonText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [schemaName, setSchemaName] = useState('');
@@ -115,9 +117,10 @@ export function SchemaEditor({ onSave, currentSchema }: SchemaEditorProps) {
                 const schema = validateJson(jsonText);
                 if (schema) {
                   return (
-                    <pre className="preview-json">
-                      {JSON.stringify(schema, null, 2)}
-                    </pre>
+                    <DynamicFormRenderer
+                      schema={schema}
+                      onCommand={onCommand || (() => console.log('Preview mode - command not sent'))}
+                    />
                   );
                 }
                 return <div className="preview-error">Invalid schema</div>;

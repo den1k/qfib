@@ -4,11 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useBLE } from './hooks/useBLE';
 import { useMQTT } from './hooks/useMQTT';
 import { useFormSchema } from './hooks/useFormSchema';
+import { useCommandTracker } from './hooks/useCommandTracker';
 import { DynamicFormRenderer } from './components/DynamicFormRenderer';
 import { SchemaEditor } from './components/SchemaEditor';
+import { CommandStatus } from './components/CommandStatus';
 import { defaultSchemas } from './defaults/defaultSchemas';
+import { generateCommandId } from './utils/idGenerator';
 
 export default function Home() {
+  const {
+    commands,
+    trackCommand,
+    parseResponse,
+    clearCommands
+  } = useCommandTracker();
+
   const { 
     connected: bleConnected, 
     error: bleError, 
@@ -18,7 +28,7 @@ export default function Home() {
     device, 
     messages: bleMessages,
     clearMessages: clearBLEMessages
-  } = useBLE();
+  } = useBLE({ onResponse: parseResponse });
 
   const { 
     isConnected: mqttConnected,
@@ -29,7 +39,7 @@ export default function Home() {
     sendServoCommand: sendMQTTCommand,
     publishCommand: publishMQTTCommand,
     clearMessages: clearMQTTMessages
-  } = useMQTT();
+  } = useMQTT({ onResponse: parseResponse });
 
   const {
     schemas,
@@ -47,6 +57,7 @@ export default function Home() {
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize default schemas if none exist
   useEffect(() => {
@@ -57,34 +68,43 @@ export default function Home() {
   }, [schemas.length]); // Only depend on schemas.length to avoid unnecessary re-runs
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Unified command sender
-  const sendCommand = (command: string) => {
-    if (activeMode === 'ble') {
-      sendBLECommand(command);
-    } else if (activeMode === 'mqtt') {
-      publishMQTTCommand(command);
+    // Scroll the messages container internally without affecting viewport scroll
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   };
 
+  // Unified command sender with command tracking
+  const sendCommand = (command: string) => {
+    const cmdId = generateCommandId();
+    const commandWithId = `${cmdId}:${command}`;
+    
+    // Track the command
+    trackCommand(cmdId, command, activeMode);
+    
+    if (activeMode === 'ble') {
+      sendBLECommand(commandWithId);
+    } else if (activeMode === 'mqtt') {
+      publishMQTTCommand(commandWithId);
+    }
+    
+    // Scroll messages container when a command is sent (without affecting viewport)
+    setTimeout(() => scrollToBottom(), 0);
+  };
+
+  // Scroll messages container when new messages arrive (without affecting viewport)
   useEffect(() => {
-    // Only scroll to bottom if there are messages to avoid scrolling on initial load
     const currentMessages = activeMode === 'ble' ? bleMessages : mqttMessages;
     if (currentMessages.length > 0) {
       scrollToBottom();
     }
-  }, [bleMessages, mqttMessages, activeMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bleMessages.length, mqttMessages.length, activeMode]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim()) {
-      if (activeMode === 'ble' && bleConnected) {
-        sendBLECommand(input.trim());
-      } else if (activeMode === 'mqtt' && mqttConnected) {
-        sendMQTTCommand(input.trim());
-      }
+      sendCommand(input.trim());
       setInput('');
     }
   };
@@ -97,7 +117,11 @@ export default function Home() {
     }
 
     const provisionCommand = `PROVISION:ssid=${ssid};pass=${password}`;
-    sendBLECommand(provisionCommand);
+    const cmdId = generateCommandId();
+    const commandWithId = `${cmdId}:${provisionCommand}`;
+    
+    trackCommand(cmdId, provisionCommand, 'ble');
+    sendBLECommand(commandWithId);
     setProvisionSent(true);
   };
 
@@ -109,6 +133,36 @@ export default function Home() {
   const clearAllMessages = () => {
     clearBLEMessages();
     clearMQTTMessages();
+  };
+
+  const handleAbortAll = () => {
+    // Send abort command for all running commands
+    sendCommand('abort');
+  };
+
+  const handleAbortCommand = (commandId: string) => {
+    // Send abort command for a specific command
+    sendCommand(`abort:${commandId}`);
+  };
+
+  const handlePauseAll = () => {
+    // Send pause command for all running commands
+    sendCommand('pause');
+  };
+
+  const handlePauseCommand = (commandId: string) => {
+    // Send pause command for a specific command
+    sendCommand(`pause:${commandId}`);
+  };
+
+  const handleResumeAll = () => {
+    // Send resume command for all paused commands
+    sendCommand('resume');
+  };
+
+  const handleResumeCommand = (commandId: string) => {
+    // Send resume command for a specific command
+    sendCommand(`resume:${commandId}`);
   };
 
   const allMessages = [...bleMessages, ...mqttMessages].sort((a, b) => 
@@ -268,6 +322,7 @@ export default function Home() {
             <SchemaEditor
               onSave={handleSchemaSave}
               currentSchema={activeSchema}
+              onCommand={(cmd: string) => sendCommand(cmd)}
             />
           ) : (
             <DynamicFormRenderer
@@ -277,6 +332,21 @@ export default function Home() {
             />
           )}
         </div>
+
+        {/* Divider */}
+        <div className="border-t border-green-500 mb-4"></div>
+
+        {/* Command Status Section */}
+        <CommandStatus 
+          commands={commands} 
+          onClear={clearCommands} 
+          onAbortAll={handleAbortAll}
+          onAbortCommand={handleAbortCommand}
+          onPauseAll={handlePauseAll}
+          onPauseCommand={handlePauseCommand}
+          onResumeAll={handleResumeAll}
+          onResumeCommand={handleResumeCommand}
+        />
 
         {/* Divider */}
         <div className="border-t border-green-500 mb-4"></div>
@@ -296,7 +366,7 @@ export default function Home() {
           
           <div className="border border-green-500 flex flex-col" style={{ height: '300px' }}>
             {/* Messages Display */}
-            <div className="flex-1 overflow-y-auto messages-container p-2">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto messages-container p-2">
               {allMessages.length === 0 ? (
                 <p className="text-sm opacity-70">No messages yet...</p>
               ) : (
