@@ -23,7 +23,11 @@ interface BLEMessage {
   topic?: string;
 }
 
-export const useBLE = () => {
+interface UseBLEOptions {
+  onResponse?: (message: string) => void;
+}
+
+export const useBLE = (options?: UseBLEOptions) => {
   const [connected, setConnected] = useState(false);
   const [device, setDevice] = useState<BLEDevice | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,11 +45,13 @@ export const useBLE = () => {
     setDevice(null);
     setBleService(null);
     
-    // Clear health check interval
-    if (healthCheckInterval) {
-      clearInterval(healthCheckInterval);
-      setHealthCheckInterval(null);
-    }
+    // Clear health check interval using functional update
+    setHealthCheckInterval(prev => {
+      if (prev) {
+        clearInterval(prev);
+      }
+      return null;
+    });
     
     // Add disconnection message
     const disconnectionMessage: BLEMessage = {
@@ -54,13 +60,16 @@ export const useBLE = () => {
       source: 'ble'
     };
     setMessages(prev => [...prev.slice(-9), disconnectionMessage]);
-  }, [healthCheckInterval]);
+  }, []);
 
   const startHealthCheck = useCallback((service: BLEService) => {
-    // Clear any existing interval
-    if (healthCheckInterval) {
-      clearInterval(healthCheckInterval);
-    }
+    // Clear any existing interval using functional update
+    setHealthCheckInterval(prev => {
+      if (prev) {
+        clearInterval(prev);
+      }
+      return null;
+    });
     
     const interval = setInterval(async () => {
       try {
@@ -80,7 +89,7 @@ export const useBLE = () => {
     }, 5000); // Check every 5 seconds
     
     setHealthCheckInterval(interval);
-  }, [healthCheckInterval, handleDisconnection]);
+  }, [handleDisconnection]);
 
   const connect = useCallback(async () => {
     try {
@@ -123,6 +132,11 @@ export const useBLE = () => {
         };
         
         setMessages(prev => [...prev.slice(-9), bleMessage]);
+        
+        // Call response handler if provided
+        if (options?.onResponse) {
+          options.onResponse(message);
+        }
       });
 
       const bleService: BLEService = {
@@ -157,15 +171,17 @@ export const useBLE = () => {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
       setConnected(false);
     }
-  }, []);
+  }, [handleDisconnection, startHealthCheck]);
 
   const disconnect = useCallback(async () => {
     try {
-      // Clear health check interval
-      if (healthCheckInterval) {
-        clearInterval(healthCheckInterval);
-        setHealthCheckInterval(null);
-      }
+      // Clear health check interval using functional update
+      setHealthCheckInterval(prev => {
+        if (prev) {
+          clearInterval(prev);
+        }
+        return null;
+      });
       
       if (bleService) {
         // Note: Web Bluetooth API doesn't support removeEventListener
@@ -188,7 +204,7 @@ export const useBLE = () => {
       console.error('BLE disconnect error:', err);
       setError(err instanceof Error ? err.message : 'Disconnect error');
     }
-  }, [bleService, healthCheckInterval, handleDisconnection]);
+  }, [bleService]);
 
   const sendCommand = useCallback(async (command: string) => {
     if (!bleService || !connected) {
@@ -226,9 +242,12 @@ export const useBLE = () => {
   useEffect(() => {
     return () => {
       // Clear health check interval
-      if (healthCheckInterval) {
-        clearInterval(healthCheckInterval);
-      }
+      setHealthCheckInterval(prev => {
+        if (prev) {
+          clearInterval(prev);
+        }
+        return null;
+      });
       
       // Disconnect if still connected
       if (bleService) {
@@ -237,7 +256,7 @@ export const useBLE = () => {
         bleService.server.disconnect();
       }
     };
-  }, [bleService, healthCheckInterval, handleDisconnection]);
+  }, [bleService]);
 
   return {
     connected,
