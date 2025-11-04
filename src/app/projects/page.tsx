@@ -23,6 +23,7 @@ interface Project {
   controlSets: ControlSet[];
   schemas?: FormSchema[]; // Backward compatibility
   userId: string;
+  public?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -67,6 +68,7 @@ export default function ProjectsPage() {
     controlSets: p.controlSets || (p.schemas ? [{ id: 'default', name: 'Default', schemas: p.schemas }] : []),
     schemas: p.schemas, // Keep for backward compatibility
     userId: p.userId || '',
+    public: (p.public as boolean | undefined) ?? false,
     createdAt: p.createdAt || 0,
     updatedAt: p.updatedAt || 0,
   }));
@@ -176,6 +178,7 @@ export default function ProjectsPage() {
           mqttConfig: defaultMqttConfig,
           controlSets: defaultControlSets,
           userId: user.id,
+          public: false,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         })
@@ -296,10 +299,10 @@ export default function ProjectsPage() {
                     {project.controlSets?.length || 0} control set(s) • MQTT: {project.mqttConfig?.brokerUrl || 'Not configured'}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Link
                     href={`/projects/${project.id}`}
-                    className="text-xs px-2 py-1"
+                    className="text-xs px-2 py-1 flex items-center"
                   >
                     OPEN
                   </Link>

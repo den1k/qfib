@@ -86,8 +86,45 @@ body::before {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: retroGlow 2s ease-in-out infinite alternate;
+  -webkit-text-stroke: 0px transparent;
+  text-stroke: 0px transparent;
+  animation: retroTitleFlicker 0.5s ease-in-out, retroTitleToOutline 0.5s ease-in-out 0.5s forwards;
   filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.4));
+  opacity: 1;
+}
+
+@keyframes retroTitleFlicker {
+  0%, 100% { opacity: 1; }
+  10% { opacity: 0.3; }
+  20% { opacity: 1; }
+  30% { opacity: 0.5; }
+  40% { opacity: 1; }
+  50% { opacity: 0.7; }
+  60% { opacity: 1; }
+  70% { opacity: 0.4; }
+  80% { opacity: 1; }
+  90% { opacity: 0.6; }
+}
+
+@keyframes retroTitleToOutline {
+  from {
+    background: linear-gradient(45deg, #00ff00, #00cc00, #009900);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    -webkit-text-stroke: 0px transparent;
+    text-stroke: 0px transparent;
+  }
+  to {
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: #000000;
+    background-clip: unset;
+    -webkit-text-stroke: 1px #00ff00;
+    text-stroke: 1px #00ff00;
+    opacity: 0.6;
+  }
 }
 
 @keyframes retroGlow {

@@ -29,8 +29,17 @@ export default function ProjectPage() {
     );
   }
 
-  const { project, updateControlSets, updateMqttConfig } = useProject(projectId);
-  const { isLoading, user } = db?.useAuth() || { isLoading: false, user: null };
+  const { project, updateControlSets, updateMqttConfig, updateProject } = useProject(projectId);
+  
+  // Handle auth state - allow unauthenticated users for public projects
+  // useAuth must be called unconditionally if db exists
+  const authState = db?.useAuth();
+  const isLoading = authState?.isLoading ?? false;
+  const user = authState?.user ?? null;
+
+  const isAuthor = project && user && project.userId === user.id;
+  const isPublicProject = project?.public === true;
+  const canEdit = isAuthor; // Only authors can edit
 
   const {
     commands,
@@ -130,31 +139,45 @@ export default function ProjectPage() {
     );
   }
 
-  if (!user) {
+  // Check if user needs to be signed in (only for private projects)
+  // Note: We check this before checking if project exists, because if it's private and user isn't signed in,
+  // the query won't return it, so project will be null
+  if (!isLoading && !project) {
+    // If we're still loading, wait. Otherwise, project not found or not accessible
     return (
       <div className="min-h-screen p-2">
         <div className="max-w-4xl mx-auto">
           <h1 className="retro-title mb-4">Project</h1>
           <div className="border-t border-green-500 mb-4"></div>
           <div className="text-sm">
-            Not signed in. <a href="/" className="underline">Go home</a>
+            Project not found or you don't have access to it.
+          </div>
+          <Link href="/projects" className="text-xs underline">Back to Projects</Link>
+        </div>
+      </div>
+    );
+  }
+
+  // If project exists but is private and user is not signed in
+  if (project && !project.public && !user) {
+    return (
+      <div className="min-h-screen p-2">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="retro-title mb-4">Project</h1>
+          <div className="border-t border-green-500 mb-4"></div>
+          <div className="text-sm">
+            This project is private. Please sign in to view it. <a href="/" className="underline">Go home</a>
           </div>
         </div>
       </div>
     );
   }
 
+  // If no project yet, show loading
   if (!project) {
     return (
-      <div className="min-h-screen p-2">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="retro-title mb-4">Project</h1>
-          <div className="border-t border-green-500 mb-4"></div>
-          <div className="text-sm">
-            Project not found.
-          </div>
-          <Link href="/projects" className="text-xs underline">Back to Projects</Link>
-        </div>
+      <div className="min-h-screen p-2 flex items-center justify-center">
+        <div className="text-sm">Loading project data...</div>
       </div>
     );
   }
@@ -212,20 +235,53 @@ export default function ProjectPage() {
       <div className="max-w-4xl mx-auto">
         
         {/* Project Header */}
-        <div className="mb-4">
+        <div className="mb-4 relative">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="retro-title mb-0">{project.name}</h1>
+            <div className="text-sm" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
+              <span className="opacity-60">{'>'}</span>{' '}
+              <span>project:</span>{' '}
+              <span>{project.name}</span>
+            </div>
             <Link href="/projects" className="text-xs underline">← Back to Projects</Link>
           </div>
-          <div className="border-t border-green-500 mb-4"></div>
+          <div className="border-t border-green-500 mb-4 relative">
+            {/* Show view only indicator if viewing a public project */}
+            {isPublicProject && !isAuthor && (
+              <div className="absolute right-0 top-2">
+                <span className="text-xs opacity-70">view only</span>
+              </div>
+            )}
+          </div>
 
-          {/* MQTT Config Toggle */}
-          <button
-            onClick={() => setShowMqttConfig(!showMqttConfig)}
-            className="text-xs px-2 py-1 mb-2"
-          >
-            {showMqttConfig ? 'HIDE MQTT CONFIG' : 'EDIT MQTT CONFIG'}
-          </button>
+          {/* Public Toggle (only for authors) */}
+          {isAuthor && (
+            <div className="mb-2 flex items-center gap-2">
+              <label className="text-xs flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={project.public || false}
+                  onChange={(e) => {
+                    updateProject({ public: e.target.checked });
+                  }}
+                  className="cursor-pointer"
+                />
+                <span>Make project public</span>
+              </label>
+              {project.public && (
+                <span className="text-xs opacity-70">(Anyone can view, but only you can edit)</span>
+              )}
+            </div>
+          )}
+
+          {/* MQTT Config Toggle (only for authors) */}
+          {canEdit && (
+            <button
+              onClick={() => setShowMqttConfig(!showMqttConfig)}
+              className="text-xs px-2 py-1 mb-2"
+            >
+              {showMqttConfig ? 'HIDE MQTT CONFIG' : 'EDIT MQTT CONFIG'}
+            </button>
+          )}
 
           {showMqttConfig && (
             <form onSubmit={handleMqttConfigSave} className="border border-green-500 p-3 mb-4">
@@ -417,16 +473,18 @@ export default function ProjectPage() {
                 ))}
               </select>
             )}
-            <button
-              onClick={() => setShowSchemaEditor(!showSchemaEditor)}
-              className="text-xs px-2 py-1"
-              style={{ height: '24px' }}
-            >
-              {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT SCHEMA'}
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setShowSchemaEditor(!showSchemaEditor)}
+                className="text-xs px-2 py-1"
+                style={{ height: '24px' }}
+              >
+                {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT SCHEMA'}
+              </button>
+            )}
           </div>
 
-          {showSchemaEditor ? (
+          {showSchemaEditor && canEdit ? (
             <SchemaEditor
               onSave={handleSchemaSave}
               currentSchema={activeSchema}

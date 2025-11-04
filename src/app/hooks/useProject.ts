@@ -30,9 +30,12 @@ export interface Project {
 const ACTIVE_PROJECT_KEY = 'fible-active-project';
 
 export function useProject(projectId?: string) {
-  const { user } = db?.useAuth() || { user: null };
+  // useAuth can be called even when unauthenticated - it will return null user
+  const authState = db?.useAuth();
+  const user = authState?.user ?? null;
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
+  // Query will work for unauthenticated users if permissions allow (e.g., public projects)
   const queryResult = db?.useQuery({
     projects: projectId
       ? {
