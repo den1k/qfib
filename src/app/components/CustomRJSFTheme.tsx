@@ -74,9 +74,25 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
   } = props;
 
   // Special handling for schemas with custom buttons
-  if (formContext?.customButtons && formContext.customButtons.length > 0) {
-    // Group buttons by their group property
-    const buttonGroups = formContext.customButtons.reduce((groups: any, button: any) => {
+  // But we still want to show the form fields if there are properties
+  const hasCustomButtons = formContext?.customButtons && formContext.customButtons.length > 0;
+  const hasFormFields = properties.length > 0;
+
+  if (hasCustomButtons) {
+    // Separate buttons into form-related (WiFi/Provision) and other buttons
+    const formButtons: any[] = [];
+    const otherButtons: any[] = [];
+    
+    formContext.customButtons.forEach((button: any) => {
+      if (button.command === 'PROVISION:FORM_SUBMIT' || button.group === 'WiFi') {
+        formButtons.push(button);
+      } else {
+        otherButtons.push(button);
+      }
+    });
+
+    // Group other buttons by their group property
+    const buttonGroups = otherButtons.reduce((groups: any, button: any) => {
       const groupName = button.group || 'Default';
       if (!groups[groupName]) {
         groups[groupName] = [];
@@ -93,7 +109,50 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
         {description && (
           <div className="object-description">{description}</div>
         )}
-        {Object.entries(buttonGroups).map(([groupName, buttons]: [string, any]) => (
+        {/* Render form fields if they exist */}
+        {hasFormFields && (
+          <div className="mb-4">
+            {properties.map((prop) => prop.content)}
+            {/* Render form-related buttons directly under the fields */}
+            {formButtons.length > 0 && (
+              <div className="mt-3">
+                <div className="movement-buttons">
+                  {formButtons.map((button: any) => (
+                    <button
+                      key={button.id}
+                      type="button"
+                      className="movement-button"
+                      onClick={() => {
+                        if (formContext.onCommand) {
+                          // Special handling for PROVISION:FORM_SUBMIT - trigger form submission
+                          if (button.command === 'PROVISION:FORM_SUBMIT') {
+                            // Use the submitForm function from formContext if available
+                            if ((formContext as any).submitForm) {
+                              (formContext as any).submitForm();
+                            } else {
+                              // Fallback: find the form element and trigger submit
+                              const formElement = (document.querySelector('.dynamic-form-renderer form') as HTMLFormElement);
+                              if (formElement) {
+                                formElement.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                              }
+                            }
+                          } else {
+                            formContext.onCommand(button.command);
+                          }
+                        }
+                      }}
+                      disabled={disabled || readonly}
+                    >
+                      {button.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Render other custom buttons in groups */}
+        {Object.keys(buttonGroups).length > 0 && Object.entries(buttonGroups).map(([groupName, buttons]: [string, any]) => (
           <div key={groupName} className="mb-4 last:mb-0">
             <h4 className="text-xs font-semibold uppercase tracking-wider mb-2 opacity-80">
               {groupName}
@@ -281,7 +340,7 @@ export const CustomButtonTemplates = {
 
 // Custom widgets for specific input types
 export const customWidgets = {
-  TextWidget: (props: any) => {
+  PasswordWidget: (props: any) => {
     const {
       id,
       value,
@@ -305,6 +364,52 @@ export const customWidgets = {
       <input
         {...domProps}
         id={id}
+        type="password"
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur && ((e) => onBlur(id, e.target.value))}
+        onFocus={onFocus && ((e) => onFocus(id, e.target.value))}
+        disabled={disabled}
+        readOnly={readonly}
+        placeholder={placeholder}
+        autoFocus={autofocus}
+        className="text-widget"
+        autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
+      />
+    );
+  },
+  TextWidget: (props: any) => {
+    const {
+      id,
+      value,
+      onChange,
+      onBlur,
+      onFocus,
+      disabled,
+      readonly,
+      placeholder,
+      autofocus,
+      uiSchema,
+      schema,
+      formContext,
+      rawErrors,
+      hideLabel,
+      hideError,
+      ...domProps
+    } = props;
+    
+    // Check if this field should have autocomplete disabled (e.g., WiFi SSID)
+    const disableAutocomplete = uiSchema?.['ui:options']?.autocomplete === 'off' || 
+                                 id?.includes('ssid') || 
+                                 id?.includes('SSID');
+    
+    return (
+      <input
+        {...domProps}
+        id={id}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur && ((e) => onBlur(id, e.target.value))}
@@ -315,6 +420,10 @@ export const customWidgets = {
         autoFocus={autofocus}
         className="text-widget"
         type="text"
+        autoComplete={disableAutocomplete ? "off" : undefined}
+        data-1p-ignore={disableAutocomplete ? true : undefined}
+        data-lpignore={disableAutocomplete ? "true" : undefined}
+        data-form-type={disableAutocomplete ? "other" : undefined}
       />
     );
   },

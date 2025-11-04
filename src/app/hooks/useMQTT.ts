@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import mqtt from 'mqtt';
 
-interface MQTTConfig {
+export interface MQTTConfig {
   brokerUrl: string;
   username: string;
   password: string;
@@ -21,6 +21,8 @@ interface MQTTMessage {
 
 interface UseMQTTOptions {
   onResponse?: (message: string) => void;
+  config?: MQTTConfig | null;
+  autoConnect?: boolean;
 }
 
 export const useMQTT = (options?: UseMQTTOptions) => {
@@ -30,18 +32,34 @@ export const useMQTT = (options?: UseMQTTOptions) => {
   const [error, setError] = useState<string | null>(null);
   const hasAutoConnectedRef = useRef(false);
   const clientRef = useRef<mqtt.MqttClient | null>(null);
+  const lastConfigRef = useRef<string>('');
 
   // Memoize config to prevent recreation on every render
-  const config: MQTTConfig = useMemo(() => ({
-    brokerUrl: process.env.NEXT_PUBLIC_MQTT_BROKER_URL!,
-    username: process.env.NEXT_PUBLIC_MQTT_USERNAME!,
-    password: process.env.NEXT_PUBLIC_MQTT_PASSWORD!,
-    commandTopic: process.env.NEXT_PUBLIC_MQTT_COMMAND_TOPIC!,
-    statusTopic: process.env.NEXT_PUBLIC_MQTT_STATUS_TOPIC!,
-    clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`
-  }), []);
+  // Use provided config or fall back to env vars
+  const config: MQTTConfig | null = useMemo(() => {
+    if (options?.config) {
+      return options.config;
+    }
+    // Fallback to env vars for backward compatibility
+    if (process.env.NEXT_PUBLIC_MQTT_BROKER_URL) {
+      return {
+        brokerUrl: process.env.NEXT_PUBLIC_MQTT_BROKER_URL!,
+        username: process.env.NEXT_PUBLIC_MQTT_USERNAME || '',
+        password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || '',
+        commandTopic: 'fible/command',
+        statusTopic: 'fible/status',
+        clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`
+      };
+    }
+    return null;
+  }, [options?.config]);
 
   const connect = useCallback(() => {
+    if (!config || !config.brokerUrl) {
+      setError('MQTT configuration is missing');
+      return;
+    }
+
     try {
       const mqttClient = mqtt.connect(config.brokerUrl, {
         clientId: config.clientId,
@@ -110,7 +128,7 @@ export const useMQTT = (options?: UseMQTTOptions) => {
       console.error('Failed to create MQTT client:', err);
       setError(`Failed to connect: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-  }, [config]);
+  }, [config, options?.onResponse]);
 
   const disconnect = useCallback(() => {
     const currentClient = clientRef.current;
@@ -123,19 +141,67 @@ export const useMQTT = (options?: UseMQTTOptions) => {
   }, []);
 
   const publishCommand = useCallback((command: string) => {
-    if (client) {
-      client.publish(config.commandTopic, command, (err) => {
+    // Always read refs at call time, not closure time
+    let currentClient = clientRef.current;
+    
+    // Fallback to client state if ref is somehow null but state exists
+    if (!currentClient && client) {
+      console.warn('Using client state as fallback - ref was null', {
+        isConnected,
+        hasClientState: !!client
+      });
+      currentClient = client;
+      clientRef.current = client; // Sync the ref
+    }
+    
+    if (!config) {
+      setError('MQTT configuration is missing');
+      return;
+    }
+    
+    if (!currentClient) {
+      console.error('MQTT client is null', { 
+        isConnectedState: isConnected, 
+        clientState: !!client,
+        hasAutoConnected: hasAutoConnectedRef.current,
+        refCurrent: !!clientRef.current
+      });
+      setError('Not connected to MQTT broker');
+      return;
+    }
+    
+    // Trust the client - if it's not connected, it will error in the callback
+    // MQTT.js client handles its own connection state internally
+    const configValue = config;
+    
+    try {
+      // Check client's internal connection state
+      const isClientConnected = (currentClient as any).connected !== false;
+      
+      if (!isClientConnected && !isConnected) {
+        console.warn('MQTT client appears disconnected, attempting publish anyway', {
+          clientConnected: isClientConnected,
+          stateConnected: isConnected
+        });
+      }
+      
+      currentClient.publish(configValue.commandTopic, command, { qos: 0 }, (err) => {
         if (err) {
-          console.error('Failed to publish command:', err);
+          console.error('Failed to publish command:', err, {
+            topic: configValue.commandTopic,
+            command: command.substring(0, 50),
+            clientConnected: (currentClient as any).connected
+          });
           setError(`Failed to send command: ${err.message}`);
         } else {
-          console.log(`Published command: ${command}`);
+          console.log(`✓ Published: ${command.substring(0, 50)}... to ${configValue.commandTopic}`);
         }
       });
-    } else {
-      setError('Not connected to MQTT broker');
+    } catch (err) {
+      console.error('Error publishing command:', err);
+      setError(`Failed to publish: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-  }, [client, config.commandTopic]);
+  }, [config, isConnected, client]);
 
   const sendServoCommand = useCallback((command: 'up' | 'down' | 'left' | 'right' | string) => {
     publishCommand(command);
@@ -153,18 +219,41 @@ export const useMQTT = (options?: UseMQTTOptions) => {
     setMessages([]);
   }, []);
 
-  // Auto-connect on mount (only once)
+  // Auto-connect on mount if enabled (default true for backward compatibility)
   useEffect(() => {
-    // Only auto-connect if we haven't already and no client exists
-    if (!hasAutoConnectedRef.current && !clientRef.current) {
-      hasAutoConnectedRef.current = true;
-      connect();
+    const shouldAutoConnect = options?.autoConnect !== false;
+    
+    if (shouldAutoConnect && config && config.brokerUrl) {
+      // Create a string representation of config to detect changes
+      const configKey = `${config.brokerUrl}:${config.clientId}`;
+      const configChanged = lastConfigRef.current !== configKey;
+      
+      // If config changed or we haven't auto-connected yet, connect
+      if (configChanged || (!hasAutoConnectedRef.current && !clientRef.current)) {
+        // Disconnect existing client if config changed
+        if (configChanged && clientRef.current) {
+          disconnect();
+        }
+        lastConfigRef.current = configKey;
+        hasAutoConnectedRef.current = true;
+        // Small delay to ensure disconnect completes
+        setTimeout(() => {
+          if (!clientRef.current) {
+            connect();
+          }
+        }, configChanged ? 100 : 0);
+      }
+    } else if (clientRef.current && (!config || !config.brokerUrl)) {
+      // If config was removed, disconnect
+      disconnect();
+      hasAutoConnectedRef.current = false;
+      lastConfigRef.current = '';
     }
     
     // No cleanup function - let React Fast Refresh handle HMR
     // The disconnect function is available if needed manually
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [config, options?.autoConnect]); // Reconnect if config changes
 
   return {
     isConnected,

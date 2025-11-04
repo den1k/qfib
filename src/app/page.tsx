@@ -172,11 +172,7 @@ export default function Home() {
   return (
     <div className="min-h-screen p-2">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <h1 className="retro-title mb-4">fiBLE</h1>
         
-        {/* Divider */}
-        <div className="border-t border-green-500 mb-4"></div>
         
         {/* Connection Section */}
         <div className="mb-4">

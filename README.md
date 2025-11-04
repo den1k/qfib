@@ -49,3 +49,24 @@ The app expects the ESP32 to advertise as "ESP32" with NUS UUIDs. Use the provid
 - `firmware/ESP32_NUS.ino`: ESP32 Arduino sketch.
 
 For issues or enhancements (e.g., custom mappings, multiple devices), see the code or ask!
+
+### InstantDB Setup
+This app can connect to InstantDB for storing schemas, devices, and command history.
+
+1) Install dependencies (already in `package.json`):
+
+```
+npm install
+```
+
+2) Configure environment:
+
+- Create a `.env.local` file (not committed) with:
+
+```
+NEXT_PUBLIC_INSTANT_APP_ID=<your_instantdb_app_id>
+```
+
+We created an app for you already: `Fible Cloud` (`9f0d6a11-e98c-4af3-a8be-a776df6c973b`). You can use that ID locally, or replace it with your own.
+
+The client initializer lives at `src/app/utils/instantdb.ts` and reads `NEXT_PUBLIC_INSTANT_APP_ID`.

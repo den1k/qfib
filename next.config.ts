@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
       unoptimized: true,
     },
   }),
-  // Webpack configuration for better file watching
+  // Webpack configuration for better file watching (used when --webpack flag is passed)
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {
@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // Turbopack configuration (Next.js 16+ defaults to Turbopack)
+  turbopack: {},
 };
 
 export default nextConfig;

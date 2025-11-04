@@ -82,6 +82,16 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
     const submitData = e.formData;
     if (!connected || !schema || !submitData) return;
     
+    // Special handling for WiFi provisioning: if form has ssid and password, generate PROVISION command
+    if (submitData.ssid !== undefined && submitData.password !== undefined) {
+      const ssid = submitData.ssid || '';
+      const password = submitData.password || '';
+      if (ssid && password) {
+        onCommand(`PROVISION:ssid=${ssid};pass=${password}`);
+        return;
+      }
+    }
+    
     // Process onSubmit fields
     Object.keys(submitData).forEach(fieldName => {
       const fieldValue = submitData[fieldName];
@@ -96,7 +106,7 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
       }
       // Note: 'never' mode is handled in the onChange handler, not here
     });
-  }, [schema, connected, sendFieldCommand]);
+  }, [schema, connected, sendFieldCommand, onCommand]);
 
   // Cleanup timers on unmount
   React.useEffect(() => {
@@ -113,16 +123,35 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
     );
   }
 
-  // Check if any fields need onSubmit mode
+  // Debug: Log schema properties
+  if (process.env.NODE_ENV === 'development') {
+    console.log('DynamicFormRenderer schema:', {
+      schemaName: schema.name,
+      properties: Object.keys(schema.schema?.properties || {}),
+      hasUiSchema: !!schema.uiSchema
+    });
+  }
+
+  // Check if any fields need onSubmit mode OR if globalSendMode is onSubmit
   const hasOnSubmitFields = Object.values(schema.schema.properties || {}).some((fieldSchema: any) => {
     const sendMode = getFieldSendMode(fieldSchema, schema.config.globalSendMode);
     return sendMode === 'onSubmit';
   });
+  
+  // Show submit button only if we have form fields that need submission AND no custom buttons handle it
+  // If there are custom buttons for form submission (like PROVISION:FORM_SUBMIT), don't show submit button
+  const hasFormSubmitButton = schema.config.customButtons?.some((btn: any) => 
+    btn.command === 'PROVISION:FORM_SUBMIT' || btn.id === 'provision-wifi'
+  );
+  const hasFormFieldsToSubmit = Object.keys(schema.schema.properties || {}).length > 0;
+  // Only show submit if we have fields AND no custom button is handling submission
+  const showSubmitButton = hasOnSubmitFields || 
+    (schema.config.globalSendMode === 'onSubmit' && hasFormFieldsToSubmit && !hasFormSubmitButton);
 
   // Create custom button templates that hide submit button when not needed
   const conditionalButtonTemplates = {
     ...CustomButtonTemplates,
-    SubmitButton: hasOnSubmitFields ? CustomButtonTemplates.SubmitButton : () => null
+    SubmitButton: showSubmitButton ? CustomButtonTemplates.SubmitButton : () => null
   };
 
   return (
@@ -132,7 +161,7 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
         uiSchema={schema.uiSchema}
         formData={formData}
         onChange={handleFormChange}
-        onSubmit={hasOnSubmitFields ? handleSubmit : undefined}
+        onSubmit={showSubmitButton ? handleSubmit : undefined}
         validator={validator}
         templates={{
           FieldTemplate: CustomFieldTemplate,
@@ -146,7 +175,15 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
         liveValidate={false}
         formContext={{
           customButtons: schema.config.customButtons,
-          onCommand: onCommand
+          onCommand: onCommand,
+          formData: formData,
+          submitForm: () => {
+            // Manually trigger form submission
+            if (schema && formData && connected) {
+              // Create a synthetic submit event with formData
+              handleSubmit({ formData } as any);
+            }
+          }
         }}
       />
     </div>
