@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { getInstantDB } from '@/app/utils/instantdb';
 import { useProject } from '@/app/hooks/useProject';
 import { useMQTT } from '@/app/hooks/useMQTT';
 import { useBLE } from '@/app/hooks/useBLE';
-import { useFormSchema } from '@/app/hooks/useFormSchema';
 import { useCommandTracker } from '@/app/hooks/useCommandTracker';
 import { DynamicFormRenderer } from '@/app/components/DynamicFormRenderer';
 import { SchemaEditor } from '@/app/components/SchemaEditor';
@@ -19,15 +19,23 @@ const db = getInstantDB();
 
 export default function ProjectPage() {
   const params = useParams();
-  const router = useRouter();
-  const projectId = params?.projectId as string;
+  const projectId = params?.projectId as string | undefined;
 
-  const { project, updateControlSets, updateSchemas, updateMqttConfig } = useProject(projectId);
+  if (!projectId) {
+    return (
+      <div className="min-h-screen p-2 flex items-center justify-center">
+        <div className="text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  const { project, updateControlSets, updateMqttConfig } = useProject(projectId);
   const { isLoading, user } = db?.useAuth() || { isLoading: false, user: null };
 
   const {
     commands,
     trackCommand,
+    updateCommandStatus,
     parseResponse,
     clearCommands,
   } = useCommandTracker();
@@ -44,7 +52,7 @@ export default function ProjectPage() {
 
   // Use project's MQTT config if available
   const mqttConfig = project?.mqttConfig;
-  const hasMqttConfig = mqttConfig && mqttConfig.brokerUrl;
+  const hasMqttConfig = Boolean(mqttConfig && mqttConfig.brokerUrl);
   const {
     isConnected: mqttConnected,
     messages: mqttMessages,
@@ -59,8 +67,8 @@ export default function ProjectPage() {
     autoConnect: hasMqttConfig, // Auto-connect if project has MQTT config
   });
 
-  // Use project's control sets
-  const controlSets: ControlSet[] = project?.controlSets || (project?.schemas ? [{ id: 'default', name: 'Default', schemas: project.schemas }] : []);
+  const controlSets: ControlSet[] = project?.controlSets || [];
+
   const [activeControlSetId, setActiveControlSetId] = useState<string>('');
   const [activeSchemaId, setActiveSchemaId] = useState<string>('');
 
@@ -103,7 +111,7 @@ export default function ProjectPage() {
     password: '',
     commandTopic: 'fible/command',
     statusTopic: 'fible/status',
-    clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`,
+    clientId: `webapp-client-${Math.random().toString(16).slice(2, 10)}`,
   });
 
   // Update form when project loads
@@ -113,10 +121,11 @@ export default function ProjectPage() {
     }
   }, [project]);
 
+
   if (isLoading) {
     return (
       <div className="min-h-screen p-2 flex items-center justify-center">
-        <div className="text-sm">Loading...</div>
+        <div className="text-sm">Loading project data...</div>
       </div>
     );
   }
@@ -141,8 +150,10 @@ export default function ProjectPage() {
         <div className="max-w-4xl mx-auto">
           <h1 className="retro-title mb-4">Project</h1>
           <div className="border-t border-green-500 mb-4"></div>
-          <div className="text-sm">Project not found.</div>
-          <a href="/projects" className="text-xs underline">Back to Projects</a>
+          <div className="text-sm">
+            Project not found.
+          </div>
+          <Link href="/projects" className="text-xs underline">Back to Projects</Link>
         </div>
       </div>
     );
@@ -199,11 +210,12 @@ export default function ProjectPage() {
   return (
     <div className="min-h-screen p-2">
       <div className="max-w-4xl mx-auto">
+        
         {/* Project Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <h1 className="retro-title mb-0">{project.name}</h1>
-            <a href="/projects" className="text-xs underline">← Back to Projects</a>
+            <Link href="/projects" className="text-xs underline">← Back to Projects</Link>
           </div>
           <div className="border-t border-green-500 mb-4"></div>
 
@@ -501,4 +513,3 @@ export default function ProjectPage() {
     </div>
   );
 }
-

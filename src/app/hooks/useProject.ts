@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getInstantDB } from '@/app/utils/instantdb';
-import { FormSchema } from '@/types/formSchema';
 
 const db = getInstantDB();
 
@@ -23,6 +22,7 @@ export interface Project {
   mqttConfig: MQTTConfig;
   controlSets: ControlSet[];
   userId: string;
+  public?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -33,8 +33,7 @@ export function useProject(projectId?: string) {
   const { user } = db?.useAuth() || { user: null };
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
-  // Query the specific project if projectId is provided
-  const { data } = db?.useQuery({
+  const queryResult = db?.useQuery({
     projects: projectId
       ? {
           $: {
@@ -42,14 +41,15 @@ export function useProject(projectId?: string) {
           },
         }
       : undefined,
-  }) || { data: null };
-
+  });
+  const { data } = queryResult || { data: null };
   const rawProject = projectId && data?.projects ? data.projects[0] : null;
+
   const project: Project | null = rawProject
     ? {
         id: rawProject.id,
-        name: rawProject.name || '',
-        mqttConfig: rawProject.mqttConfig || {
+        name: (rawProject.name as string) || '',
+        mqttConfig: (rawProject.mqttConfig as MQTTConfig | undefined) || {
           brokerUrl: '',
           username: '',
           password: '',
@@ -57,10 +57,11 @@ export function useProject(projectId?: string) {
           statusTopic: 'fible/status',
           clientId: '',
         },
-        controlSets: rawProject.controlSets || [],
-        userId: rawProject.userId || '',
-        createdAt: rawProject.createdAt || 0,
-        updatedAt: rawProject.updatedAt || 0,
+        controlSets: (rawProject.controlSets as ControlSet[]) || [],
+        userId: (rawProject.userId as string) || '',
+        public: (rawProject.public as boolean | undefined) ?? false,
+        createdAt: (rawProject.createdAt as number) || 0,
+        updatedAt: (rawProject.updatedAt as number) || 0,
       }
     : null;
 
@@ -103,13 +104,6 @@ export function useProject(projectId?: string) {
     [updateProject]
   );
 
-  const updateSchemas = useCallback(
-    async (schemas: FormSchema[]) => {
-      await updateProject({ schemas });
-    },
-    [updateProject]
-  );
-
   const updateMqttConfig = useCallback(
     async (mqttConfig: MQTTConfig) => {
       await updateProject({ mqttConfig });
@@ -121,7 +115,6 @@ export function useProject(projectId?: string) {
     project,
     updateProject,
     updateControlSets,
-    updateSchemas,
     updateMqttConfig,
     activeProjectId,
     setActiveProjectId,

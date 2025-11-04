@@ -434,3 +434,109 @@ textarea::placeholder {
 .object-field > div {
   display: block;
 }
+
+/* Simple RC Controls */
+.simple-rc-controls {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.simple-rc-button {
+  aspect-ratio: 1;
+  min-width: 80px;
+  min-height: 80px;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  background-color: var(--terminal-bg);
+  color: var(--terminal-green);
+  border: 2px solid var(--terminal-green);
+  box-shadow: var(--terminal-border-glow);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-shadow: var(--terminal-text-shadow);
+}
+
+.simple-rc-button:hover:not(:disabled) {
+  background-color: var(--terminal-green);
+  color: var(--terminal-bg);
+  box-shadow: var(--terminal-glow);
+  text-shadow: none;
+  transform: scale(1.05);
+}
+
+.simple-rc-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.simple-rc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.simple-rc-button:disabled:hover {
+  background-color: var(--terminal-bg);
+  color: var(--terminal-green);
+  transform: none;
+}
+
+/* Legacy support for roomba-* classes */
+.roomba-controls {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.roomba-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.roomba-button {
+  aspect-ratio: 1;
+  min-width: 80px;
+  min-height: 80px;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  background-color: var(--terminal-bg);
+  color: var(--terminal-green);
+  border: 2px solid var(--terminal-green);
+  box-shadow: var(--terminal-border-glow);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-shadow: var(--terminal-text-shadow);
+}
+
+.roomba-button:hover:not(:disabled) {
+  background-color: var(--terminal-green);
+  color: var(--terminal-bg);
+  box-shadow: var(--terminal-glow);
+  text-shadow: none;
+  transform: scale(1.05);
+}
+
+.roomba-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.roomba-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.roomba-button:disabled:hover {
+  background-color: var(--terminal-bg);
+  color: var(--terminal-green);
+  transform: none;
+}

@@ -177,6 +177,7 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
           customButtons: schema.config.customButtons,
           onCommand: onCommand,
           formData: formData,
+          connected: connected,
           submitForm: () => {
             // Manually trigger form submission
             if (schema && formData && connected) {

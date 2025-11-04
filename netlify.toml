@@ -1,16 +1,11 @@
 [build]
   command = "npm run build"
-  publish = "out"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Next.js specific settings
+# Using Netlify's Next.js runtime for proper SSR support
 [build.processing]
   skip_processing = true
 
@@ -38,3 +33,6 @@
   for = "/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

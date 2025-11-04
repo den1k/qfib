@@ -48,7 +48,7 @@ export const useMQTT = (options?: UseMQTTOptions) => {
         password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || '',
         commandTopic: 'fible/command',
         statusTopic: 'fible/status',
-        clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`
+        clientId: `webapp-client-${Math.random().toString(16).slice(2, 10)}`
       };
     }
     return null;

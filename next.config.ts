@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Only use export mode for production builds
-  ...(process.env.NODE_ENV === 'production' && {
-    output: "export",
-    trailingSlash: true,
-    images: {
-      unoptimized: true,
-    },
-  }),
+  // Disable static export - use proper SSR for dynamic routes
+  // ...(process.env.NODE_ENV === 'production' && {
+  //   output: "export",
+  //   trailingSlash: true,
+  //   images: {
+  //     unoptimized: true,
+  //   },
+  // }),
   // Webpack configuration for better file watching (used when --webpack flag is passed)
   webpack: (config, { dev }) => {
     if (dev) {
@@ -19,8 +19,6 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
-  // Turbopack configuration (Next.js 16+ defaults to Turbopack)
-  turbopack: {},
 };
 
 export default nextConfig;

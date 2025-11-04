@@ -1,5 +1,6 @@
 import React from 'react';
 import { FieldTemplateProps, ObjectFieldTemplateProps, TitleFieldProps, BaseInputTemplateProps } from '@rjsf/utils';
+import { SimpleRCControls } from './SimpleRCControls';
 
 // Custom Field Template
 export function CustomFieldTemplate(props: FieldTemplateProps) {
@@ -72,6 +73,16 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
     onAddClick,
     formContext
   } = props;
+
+  // If this object field has a custom widget specified, don't render it as an object
+  // Instead, let RJSF handle it as a widget (this check is here for safety, but
+  // RJSF should handle widget rendering before reaching ObjectFieldTemplate)
+  const hasCustomWidget = uiSchema?.['ui:widget'];
+  if (hasCustomWidget && properties.length === 0) {
+    // This shouldn't normally happen, but if it does, return null
+    // The widget should be rendered by the field template instead
+    return null;
+  }
 
   // Special handling for schemas with custom buttons
   // But we still want to show the form fields if there are properties
@@ -525,5 +536,65 @@ export const customWidgets = {
     >
       {props.uiSchema?.['ui:options']?.label || props.schema.title || 'Button'}
     </button>
-  )
+  ),
+  SimpleRCWidget: (props: any) => {
+    const {
+      formContext,
+      disabled,
+      readonly,
+      id,
+      onChange,
+      value,
+      schema,
+      uiSchema
+    } = props;
+    
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('SimpleRCWidget rendered', {
+        id,
+        hasFormContext: !!formContext,
+        hasOnCommand: !!formContext?.onCommand,
+        connected: formContext?.connected,
+        value,
+        schema,
+        uiSchema
+      });
+    }
+    
+    // Get connection status from formContext or use a default
+    // The formContext should have connected state passed from DynamicFormRenderer
+    const connected = formContext?.connected ?? false;
+    const onCommand = formContext?.onCommand;
+    
+    if (!onCommand) {
+      console.warn('SimpleRCWidget: onCommand not found in formContext', formContext);
+      return (
+        <div className="text-xs text-red-500">
+          Error: Simple RC controls require onCommand in formContext
+        </div>
+      );
+    }
+    
+    // Wrap onCommand to optionally update form data if needed
+    // Simple RC controls don't store form data, but we'll call onChange with a string
+    // to satisfy RJSF validation if needed
+    const handleCommand = (command: string) => {
+      onCommand(command);
+      // Update form data with the command string to satisfy validation
+      // Since the schema expects a string type, we'll store the command as a string
+      if (onChange) {
+        onChange(command);
+      }
+    };
+    
+    return (
+      <div id={id}>
+        <SimpleRCControls
+          onCommand={handleCommand}
+          connected={connected && !disabled && !readonly}
+        />
+      </div>
+    );
+  }
 };

@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build --webpack",
     "start": "next start",
-    "deploy": "npm run build && netlify deploy --prod --dir=out"
+    "deploy": "npm run build && netlify deploy --prod"
   },
   "dependencies": {
     "@instantdb/react": "0.22.40",

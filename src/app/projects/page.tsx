@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { getInstantDB } from '@/app/utils/instantdb';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FormSchema } from '@/types/formSchema';
 import { ControlSet } from '@/types/controlSet';
 import { id } from '@instantdb/react';
@@ -70,6 +71,7 @@ export default function ProjectsPage() {
     updatedAt: p.updatedAt || 0,
   }));
 
+
   const createProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !projectName.trim()) return;
@@ -82,7 +84,7 @@ export default function ProjectsPage() {
         password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || '',
         commandTopic: 'fible/command',
         statusTopic: 'fible/status',
-        clientId: `webapp-client-${Math.random().toString(16).substr(2, 8)}`,
+        clientId: `webapp-client-${Math.random().toString(16).slice(2, 10)}`,
       };
 
       // Create default control sets
@@ -295,12 +297,12 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <a
+                  <Link
                     href={`/projects/${project.id}`}
                     className="text-xs px-2 py-1"
                   >
                     OPEN
-                  </a>
+                  </Link>
                   <button
                     onClick={() => deleteProject(project.id)}
                     className="text-xs px-2 py-1 text-red-400"

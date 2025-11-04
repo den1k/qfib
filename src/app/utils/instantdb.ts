@@ -8,6 +8,7 @@ let _db: ReturnType<typeof init> | null = null;
 
 export function getInstantDB() {
   if (!appId) {
+    console.warn('[InstantDB] No appId found. NEXT_PUBLIC_INSTANT_APP_ID is not set.');
     return null;
   }
   if (_db) {
