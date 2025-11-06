@@ -126,7 +126,7 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
   // Debug: Log schema properties
   if (process.env.NODE_ENV === 'development') {
     console.log('DynamicFormRenderer schema:', {
-      schemaName: schema.name,
+      schemaId: schema.id,
       properties: Object.keys(schema.schema?.properties || {}),
       hasUiSchema: !!schema.uiSchema
     });

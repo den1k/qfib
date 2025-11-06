@@ -75,55 +75,105 @@ body::before {
   100% { background-position: 0 100%, 100% 0; }
 }
 
-/* Retro Title */
+/* Retro Title - Generic styling for page headings */
 .retro-title {
   font-family: var(--font-orbitron), 'Courier New', monospace;
   font-weight: 900;
   font-size: 1.8rem;
   letter-spacing: 0.2em;
-  background: linear-gradient(45deg, #00ff00, #00cc00, #009900);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  -webkit-text-stroke: 0px transparent;
-  text-stroke: 0px transparent;
-  animation: retroTitleFlicker 0.5s ease-in-out, retroTitleToOutline 0.5s ease-in-out 0.5s forwards;
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: #00ff00;
+  background-clip: unset;
+  -webkit-text-stroke: 1px #00ff00;
+  text-stroke: 1px #00ff00;
   filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.4));
   opacity: 1;
 }
 
-@keyframes retroTitleFlicker {
-  0%, 100% { opacity: 1; }
-  10% { opacity: 0.3; }
-  20% { opacity: 1; }
-  30% { opacity: 0.5; }
-  40% { opacity: 1; }
-  50% { opacity: 0.7; }
-  60% { opacity: 1; }
-  70% { opacity: 0.4; }
-  80% { opacity: 1; }
-  90% { opacity: 0.6; }
+/* App Name in Nav - Boot animation */
+.app-name {
+  font-family: var(--font-orbitron), 'Courier New', monospace;
+  font-weight: 900;
+  font-size: 1.8rem;
+  letter-spacing: 0.2em;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+  -webkit-text-stroke: 1px #00ff00;
+  animation: retroTitleBoot 2s ease-in-out forwards;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.4));
+  opacity: 0;
 }
 
-@keyframes retroTitleToOutline {
-  from {
-    background: linear-gradient(45deg, #00ff00, #00cc00, #009900);
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    -webkit-text-stroke: 0px transparent;
-    text-stroke: 0px transparent;
-  }
-  to {
-    background: none;
-    -webkit-background-clip: unset;
+/* App Name in Nav - Final state (no animation) */
+.app-name-final {
+  font-family: var(--font-orbitron), 'Courier New', monospace;
+  font-weight: 900;
+  font-size: 1.8rem;
+  letter-spacing: 0.2em;
+  background: none;
+  -webkit-background-clip: unset;
+  color: #00ff00;
+  -webkit-text-fill-color: #00ff00;
+  background-clip: unset;
+  -webkit-text-stroke: 0px transparent;
+  text-stroke: 0px transparent;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.4));
+  opacity: 1;
+}
+
+@keyframes retroTitleBoot {
+  /* Start: black text with green outline */
+  0% {
+    opacity: 0;
     -webkit-text-fill-color: #000000;
-    background-clip: unset;
     -webkit-text-stroke: 1px #00ff00;
-    text-stroke: 1px #00ff00;
-    opacity: 0.6;
+  }
+  /* Flicker phase - same frequency but fewer total flickers */
+  3% { opacity: 0.15; }
+  6% { opacity: 0.05; }
+  9% { opacity: 0.25; }
+  12% { opacity: 0.1; }
+  15% { opacity: 0.3; }
+  18% { opacity: 0.15; }
+  21% { opacity: 0.4; }
+  24% { opacity: 0.2; }
+  27% { opacity: 0.5; }
+  30% { opacity: 0.3; }
+  33% { opacity: 0.6; }
+  36% { opacity: 0.4; }
+  39% { opacity: 0.7; }
+  42% { opacity: 0.5; }
+  45% { opacity: 0.8; }
+  48% { opacity: 0.6; }
+  51% { opacity: 0.9; }
+  54% { opacity: 0.7; }
+  57% { opacity: 1; }
+  60% { opacity: 0.8; }
+  63% { opacity: 1; }
+  66% { opacity: 0.9; }
+  69% { opacity: 1; }
+  72% { opacity: 0.95; }
+  75% { opacity: 1; }
+  78% { opacity: 0.98; }
+  81% { opacity: 1; }
+  84% { opacity: 0.99; }
+  87% { opacity: 1; }
+  90% { 
+    opacity: 1;
+    -webkit-text-fill-color: #000000;
+    -webkit-text-stroke: 1px #00ff00;
+  }
+  92% {
+    opacity: 1;
+    -webkit-text-fill-color: #00ff00;
+    -webkit-text-stroke: 0px transparent;
+  }
+  /* Final: fully green */
+  100% {
+    opacity: 1;
+    -webkit-text-fill-color: #00ff00;
+    -webkit-text-stroke: 0px transparent;
   }
 }
 
@@ -179,7 +229,16 @@ body::before {
 
 /* Override Tailwind form elements */
 input,
-textarea,
+textarea {
+  background-color: var(--terminal-bg) !important;
+  color: var(--terminal-green) !important;
+  border: 1px solid var(--terminal-green) !important;
+  font-family: var(--font-jetbrains-mono), 'Courier New', monospace !important;
+  text-shadow: var(--terminal-text-shadow) !important;
+  box-shadow: var(--terminal-border-glow) !important;
+  padding: 4px 8px !important;
+}
+
 select {
   background-color: var(--terminal-bg) !important;
   color: var(--terminal-green) !important;
@@ -187,6 +246,9 @@ select {
   font-family: var(--font-jetbrains-mono), 'Courier New', monospace !important;
   text-shadow: var(--terminal-text-shadow) !important;
   box-shadow: var(--terminal-border-glow) !important;
+  padding: 2px 20px 2px 4px !important;
+  height: 24px !important;
+  line-height: 20px !important;
 }
 
 input:focus,
@@ -196,6 +258,58 @@ select:focus {
   box-shadow: var(--terminal-glow) !important;
   outline: none !important;
   ring: 0 !important;
+}
+
+/* Retro Checkbox Styling */
+label:has(input[type="checkbox"]),
+div:has(input[type="checkbox"]),
+.flex:has(input[type="checkbox"]) {
+  overflow: visible !important;
+}
+
+input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  background-color: var(--terminal-bg) !important;
+  border: 1px solid var(--terminal-green) !important;
+  box-shadow: var(--terminal-border-glow) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  overflow: visible !important;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--terminal-bg) !important;
+  box-shadow: var(--terminal-glow) !important;
+}
+
+input[type="checkbox"]:checked::after {
+  content: '✓' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-25%, -64%) !important;
+  color: var(--terminal-green) !important;
+  font-size: 30px !important;
+  line-height: 1 !important;
+  font-weight: bold !important;
+  text-shadow: 0 0 4px rgba(0, 255, 0, 0.9) !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+input[type="checkbox"]:hover {
+  box-shadow: var(--terminal-glow) !important;
+}
+
+input[type="checkbox"]:focus {
+  box-shadow: var(--terminal-glow) !important;
+  outline: none !important;
 }
 
 /* Override Tailwind buttons */

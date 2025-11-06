@@ -2,15 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import mqtt from 'mqtt';
-
-export interface MQTTConfig {
-  brokerUrl: string;
-  username: string;
-  password: string;
-  commandTopic: string;
-  statusTopic: string;
-  clientId: string;
-}
+import { MQTTConfig } from '@/app/utils/mqttConfig';
 
 interface MQTTMessage {
   topic: string;
@@ -40,17 +32,6 @@ export const useMQTT = (options?: UseMQTTOptions) => {
     if (options?.config) {
       return options.config;
     }
-    // Fallback to env vars for backward compatibility
-    if (process.env.NEXT_PUBLIC_MQTT_BROKER_URL) {
-      return {
-        brokerUrl: process.env.NEXT_PUBLIC_MQTT_BROKER_URL!,
-        username: process.env.NEXT_PUBLIC_MQTT_USERNAME || '',
-        password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || '',
-        commandTopic: 'fible/command',
-        statusTopic: 'fible/status',
-        clientId: `webapp-client-${Math.random().toString(16).slice(2, 10)}`
-      };
-    }
     return null;
   }, [options?.config]);
 
@@ -60,8 +41,33 @@ export const useMQTT = (options?: UseMQTTOptions) => {
       return;
     }
 
+    // Ensure broker URL has protocol (default to wss:// for secure connections)
+    let brokerUrl = config.brokerUrl.trim();
+    if (!brokerUrl.startsWith('ws://') && !brokerUrl.startsWith('wss://') && !brokerUrl.startsWith('mqtt://') && !brokerUrl.startsWith('mqtts://')) {
+      // Default to wss:// for secure connections (emqxsl.com suggests SSL)
+      brokerUrl = `wss://${brokerUrl}`;
+      // Add default port if not specified
+      if (!brokerUrl.includes(':8084') && !brokerUrl.includes(':8083') && !brokerUrl.includes(':8883') && !brokerUrl.includes(':1883')) {
+        brokerUrl = `${brokerUrl}:8084`;
+      }
+    }
+
+    // Add /mqtt path if not present (required by some EMQX brokers)
+    // Extract the path part (everything after the port)
+    const urlMatch = brokerUrl.match(/^(wss?:\/\/[^:]+:\d+)(\/.*)?$/);
+    if (urlMatch) {
+      const baseUrl = urlMatch[1]; // e.g., wss://host:8084
+      const existingPath = urlMatch[2] || ''; // e.g., /mqtt or /
+      
+      if (!existingPath.includes('/mqtt')) {
+        // Remove trailing slash if present, then add /mqtt
+        const cleanPath = existingPath.endsWith('/') ? existingPath.slice(0, -1) : existingPath;
+        brokerUrl = `${baseUrl}${cleanPath}/mqtt`;
+      }
+    }
+
     try {
-      const mqttClient = mqtt.connect(config.brokerUrl, {
+      const mqttClient = mqtt.connect(brokerUrl, {
         clientId: config.clientId,
         username: config.username,
         password: config.password,
@@ -73,17 +79,13 @@ export const useMQTT = (options?: UseMQTTOptions) => {
       });
 
       mqttClient.on('connect', () => {
-        console.log('Connected to MQTT broker');
         setIsConnected(true);
         setError(null);
         
         // Subscribe to status updates
         mqttClient.subscribe(config.statusTopic, (err) => {
           if (err) {
-            console.error('Failed to subscribe to status topic:', err);
             setError(`Failed to subscribe: ${err.message}`);
-          } else {
-            console.log(`Subscribed to ${config.statusTopic}`);
           }
         });
       });
@@ -97,7 +99,6 @@ export const useMQTT = (options?: UseMQTTOptions) => {
           source: 'mqtt'
         };
         
-        console.log(`Received: ${msg.message} on topic ${topic}`);
         setMessages(prev => [...prev.slice(-9), msg]); // Keep last 10 messages
         
         // Call response handler if provided
@@ -107,28 +108,37 @@ export const useMQTT = (options?: UseMQTTOptions) => {
       });
 
       mqttClient.on('error', (err) => {
-        console.error('MQTT error:', err);
-        setError(err.message);
+        const errorMessage = err.message || err.toString() || 'Unknown MQTT error';
+        const errorCode = (err as any).code;
+        const errorDetails = errorCode ? ` (code: ${errorCode})` : '';
+        const detailedError = `MQTT connection error: ${errorMessage}${errorDetails}. Broker: ${brokerUrl}. Check URL, port, credentials, and firewall settings.`;
+        setError(detailedError);
         setIsConnected(false);
       });
 
       mqttClient.on('close', () => {
-        console.log('MQTT connection closed');
+        if (!isConnected) {
+          setError(`Connection closed. Unable to connect to ${brokerUrl}. Check if the broker URL, port, and credentials are correct.`);
+        }
         setIsConnected(false);
       });
 
       mqttClient.on('reconnect', () => {
-        console.log('MQTT reconnecting...');
+        setIsConnected(false);
+      });
+
+      mqttClient.on('offline', () => {
+        setError(`MQTT client offline. Check network connection and broker URL: ${brokerUrl}`);
         setIsConnected(false);
       });
 
       clientRef.current = mqttClient;
       setClient(mqttClient);
     } catch (err) {
-      console.error('Failed to create MQTT client:', err);
-      setError(`Failed to connect: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const errorDetails = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to create MQTT client: ${errorDetails}. Broker URL: ${brokerUrl}`);
     }
-  }, [config, options?.onResponse]);
+  }, [config, options?.onResponse, isConnected]);
 
   const disconnect = useCallback(() => {
     const currentClient = clientRef.current;
@@ -146,10 +156,6 @@ export const useMQTT = (options?: UseMQTTOptions) => {
     
     // Fallback to client state if ref is somehow null but state exists
     if (!currentClient && client) {
-      console.warn('Using client state as fallback - ref was null', {
-        isConnected,
-        hasClientState: !!client
-      });
       currentClient = client;
       clientRef.current = client; // Sync the ref
     }
@@ -160,12 +166,6 @@ export const useMQTT = (options?: UseMQTTOptions) => {
     }
     
     if (!currentClient) {
-      console.error('MQTT client is null', { 
-        isConnectedState: isConnected, 
-        clientState: !!client,
-        hasAutoConnected: hasAutoConnectedRef.current,
-        refCurrent: !!clientRef.current
-      });
       setError('Not connected to MQTT broker');
       return;
     }
@@ -175,30 +175,12 @@ export const useMQTT = (options?: UseMQTTOptions) => {
     const configValue = config;
     
     try {
-      // Check client's internal connection state
-      const isClientConnected = (currentClient as any).connected !== false;
-      
-      if (!isClientConnected && !isConnected) {
-        console.warn('MQTT client appears disconnected, attempting publish anyway', {
-          clientConnected: isClientConnected,
-          stateConnected: isConnected
-        });
-      }
-      
       currentClient.publish(configValue.commandTopic, command, { qos: 0 }, (err) => {
         if (err) {
-          console.error('Failed to publish command:', err, {
-            topic: configValue.commandTopic,
-            command: command.substring(0, 50),
-            clientConnected: (currentClient as any).connected
-          });
           setError(`Failed to send command: ${err.message}`);
-        } else {
-          console.log(`✓ Published: ${command.substring(0, 50)}... to ${configValue.commandTopic}`);
         }
       });
     } catch (err) {
-      console.error('Error publishing command:', err);
       setError(`Failed to publish: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }, [config, isConnected, client]);

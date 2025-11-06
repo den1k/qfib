@@ -67,6 +67,6 @@ npm install
 NEXT_PUBLIC_INSTANT_APP_ID=<your_instantdb_app_id>
 ```
 
-We created an app for you already: `Fible Cloud` (`9f0d6a11-e98c-4af3-a8be-a776df6c973b`). You can use that ID locally, or replace it with your own.
+We created an app for you already: `Qfib` (`9f0d6a11-e98c-4af3-a8be-a776df6c973b`). You can use that ID locally, or replace it with your own.
 
 The client initializer lives at `src/app/utils/instantdb.ts` and reads `NEXT_PUBLIC_INSTANT_APP_ID`.

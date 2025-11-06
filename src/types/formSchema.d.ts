@@ -2,7 +2,6 @@ import { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 export interface FormSchema {
   id: string;
-  name: string;
   schema: RJSFSchema;
   uiSchema?: UiSchema;
   config: FormConfig;

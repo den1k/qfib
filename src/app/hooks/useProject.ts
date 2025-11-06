@@ -2,17 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getInstantDB } from '@/app/utils/instantdb';
+import { MQTTConfig, getEmptyMQTTConfig } from '@/app/utils/mqttConfig';
 
 const db = getInstantDB();
-
-export interface MQTTConfig {
-  brokerUrl: string;
-  username: string;
-  password: string;
-  commandTopic: string;
-  statusTopic: string;
-  clientId: string;
-}
 
 import { ControlSet } from '@/types/controlSet';
 
@@ -27,7 +19,7 @@ export interface Project {
   updatedAt: number;
 }
 
-const ACTIVE_PROJECT_KEY = 'fible-active-project';
+const ACTIVE_PROJECT_KEY = 'qfib-active-project';
 
 export function useProject(projectId?: string) {
   // useAuth can be called even when unauthenticated - it will return null user
@@ -52,14 +44,7 @@ export function useProject(projectId?: string) {
     ? {
         id: rawProject.id,
         name: (rawProject.name as string) || '',
-        mqttConfig: (rawProject.mqttConfig as MQTTConfig | undefined) || {
-          brokerUrl: '',
-          username: '',
-          password: '',
-          commandTopic: 'fible/command',
-          statusTopic: 'fible/status',
-          clientId: '',
-        },
+        mqttConfig: (rawProject.mqttConfig as MQTTConfig | undefined) || getEmptyMQTTConfig(),
         controlSets: (rawProject.controlSets as ControlSet[]) || [],
         userId: (rawProject.userId as string) || '',
         public: (rawProject.public as boolean | undefined) ?? false,

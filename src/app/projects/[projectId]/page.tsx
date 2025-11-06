@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getInstantDB } from '@/app/utils/instantdb';
@@ -12,6 +12,7 @@ import { DynamicFormRenderer } from '@/app/components/DynamicFormRenderer';
 import { SchemaEditor } from '@/app/components/SchemaEditor';
 import { CommandStatus } from '@/app/components/CommandStatus';
 import { generateCommandId } from '@/app/utils/idGenerator';
+import { createDefaultMQTTConfig } from '@/app/utils/mqttConfig';
 import { ControlSet } from '@/types/controlSet';
 import { FormSchema } from '@/types/formSchema';
 
@@ -21,25 +22,15 @@ export default function ProjectPage() {
   const params = useParams();
   const projectId = params?.projectId as string | undefined;
 
-  if (!projectId) {
-    return (
-      <div className="min-h-screen p-2 flex items-center justify-center">
-        <div className="text-sm">Loading...</div>
-      </div>
-    );
-  }
-
-  const { project, updateControlSets, updateMqttConfig, updateProject } = useProject(projectId);
+  // Call ALL hooks first, before any conditional returns
+  // This ensures hooks are always called in the same order
+  const { project, updateControlSets, updateMqttConfig, updateProject } = useProject(projectId || '');
   
   // Handle auth state - allow unauthenticated users for public projects
   // useAuth must be called unconditionally if db exists
   const authState = db?.useAuth();
   const isLoading = authState?.isLoading ?? false;
   const user = authState?.user ?? null;
-
-  const isAuthor = project && user && project.userId === user.id;
-  const isPublicProject = project?.public === true;
-  const canEdit = isAuthor; // Only authors can edit
 
   const {
     commands,
@@ -80,6 +71,29 @@ export default function ProjectPage() {
 
   const [activeControlSetId, setActiveControlSetId] = useState<string>('');
   const [activeSchemaId, setActiveSchemaId] = useState<string>('');
+  const [input, setInput] = useState('');
+  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
+  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
+  const [showMqttConfig, setShowMqttConfig] = useState(false);
+  const [mqttConfigForm, setMqttConfigForm] = useState(() => 
+    mqttConfig || createDefaultMQTTConfig()
+  );
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Compute allMessages early (needed for useEffect)
+  const allMessages = [...bleMessages, ...mqttMessages].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  const scrollToBottom = () => {
+    // Directly scroll the container to bottom without using scrollIntoView
+    // This prevents iOS from scrolling the viewport
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  };
 
   // Initialize active control set and schema
   useEffect(() => {
@@ -90,6 +104,32 @@ export default function ProjectPage() {
       }
     }
   }, [controlSets, activeControlSetId]);
+
+  // Only reset form when opening the editor (load from project config)
+  useEffect(() => {
+    if (showMqttConfig && project?.mqttConfig) {
+      setMqttConfigForm(project.mqttConfig);
+    }
+  }, [showMqttConfig]); // Only when opening the editor, not when project changes
+
+  // Scroll messages container when new messages arrive or when a command is sent
+  useEffect(() => {
+    scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMessages.length]);
+
+  // Now handle early returns AFTER all hooks are called
+  if (!projectId) {
+    return (
+      <div className="min-h-screen p-2 flex items-center justify-center">
+        <div className="text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  const isAuthor = project && user && project.userId === user.id;
+  const isPublicProject = project?.public === true;
+  const canEdit = isAuthor; // Only authors can edit
 
   const activeControlSet = controlSets.find(cs => cs.id === activeControlSetId);
   const activeSchema = activeControlSet?.schemas.find(s => s.id === activeSchemaId) || activeControlSet?.schemas[0] || null;
@@ -110,25 +150,65 @@ export default function ProjectPage() {
     setShowSchemaEditor(false);
   };
 
-  const [input, setInput] = useState('');
-  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
-  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
-  const [showMqttConfig, setShowMqttConfig] = useState(false);
-  const [mqttConfigForm, setMqttConfigForm] = useState(mqttConfig || {
-    brokerUrl: '',
-    username: '',
-    password: '',
-    commandTopic: 'fible/command',
-    statusTopic: 'fible/status',
-    clientId: `webapp-client-${Math.random().toString(16).slice(2, 10)}`,
-  });
-
-  // Update form when project loads
-  useEffect(() => {
-    if (project?.mqttConfig) {
-      setMqttConfigForm(project.mqttConfig);
+  const handleDeleteControlSet = async () => {
+    if (!activeControlSet || controlSets.length <= 1) {
+      alert('Cannot delete the last control set');
+      return;
     }
-  }, [project]);
+    
+    if (!confirm(`Delete control set "${activeControlSet.name}"? This will delete all schemas in it.`)) {
+      return;
+    }
+    
+    const updatedControlSets = controlSets.filter(cs => cs.id !== activeControlSetId);
+    await updateControlSets(updatedControlSets);
+    
+    // Switch to first available control set
+    if (updatedControlSets.length > 0) {
+      setActiveControlSetId(updatedControlSets[0].id);
+      if (updatedControlSets[0].schemas.length > 0) {
+        setActiveSchemaId(updatedControlSets[0].schemas[0].id);
+      } else {
+        setActiveSchemaId('');
+      }
+    } else {
+      setActiveControlSetId('');
+      setActiveSchemaId('');
+    }
+  };
+
+  const handleCreateControlSet = async () => {
+    const newControlSetName = prompt('Enter name for new control set:');
+    if (!newControlSetName || !newControlSetName.trim()) {
+      return;
+    }
+    
+    const newSchemaId = generateCommandId();
+    const newControlSet: ControlSet = {
+      id: generateCommandId(),
+      name: newControlSetName.trim(),
+      schemas: [
+        {
+          id: newSchemaId,
+          schema: {
+            type: 'object',
+            properties: {}
+          },
+          config: {
+            globalSendMode: 'onSubmit'
+          }
+        }
+      ]
+    };
+    
+    const updatedControlSets = [...controlSets, newControlSet];
+    await updateControlSets(updatedControlSets);
+    
+    // Switch to the new control set
+    setActiveControlSetId(newControlSet.id);
+    setActiveSchemaId(newSchemaId);
+    setShowSchemaEditor(true);
+  };
 
 
   if (isLoading) {
@@ -147,8 +227,7 @@ export default function ProjectPage() {
     return (
       <div className="min-h-screen p-2">
         <div className="max-w-4xl mx-auto">
-          <h1 className="retro-title mb-4">Project</h1>
-          <div className="border-t border-green-500 mb-4"></div>
+          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Project</h1>
           <div className="text-sm">
             Project not found or you don't have access to it.
           </div>
@@ -163,8 +242,7 @@ export default function ProjectPage() {
     return (
       <div className="min-h-screen p-2">
         <div className="max-w-4xl mx-auto">
-          <h1 className="retro-title mb-4">Project</h1>
-          <div className="border-t border-green-500 mb-4"></div>
+          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Project</h1>
           <div className="text-sm">
             This project is private. Please sign in to view it. <a href="/" className="underline">Go home</a>
           </div>
@@ -226,10 +304,6 @@ export default function ProjectPage() {
     clearMQTTMessages();
   };
 
-  const allMessages = [...bleMessages, ...mqttMessages].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
-
   return (
     <div className="min-h-screen p-2">
       <div className="max-w-4xl mx-auto">
@@ -242,20 +316,10 @@ export default function ProjectPage() {
               <span>project:</span>{' '}
               <span>{project.name}</span>
             </div>
-            <Link href="/projects" className="text-xs underline">← Back to Projects</Link>
-          </div>
-          <div className="border-t border-green-500 mb-4 relative">
             {/* Show view only indicator if viewing a public project */}
-            {isPublicProject && !isAuthor && (
-              <div className="absolute right-0 top-2">
+            {isPublicProject && !isAuthor ? (
                 <span className="text-xs opacity-70">view only</span>
-              </div>
-            )}
-          </div>
-
-          {/* Public Toggle (only for authors) */}
-          {isAuthor && (
-            <div className="mb-2 flex items-center gap-2">
+            ) : isAuthor ? (
               <label className="text-xs flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -265,22 +329,23 @@ export default function ProjectPage() {
                   }}
                   className="cursor-pointer"
                 />
-                <span>Make project public</span>
+                <span>public (view only)</span>
               </label>
-              {project.public && (
-                <span className="text-xs opacity-70">(Anyone can view, but only you can edit)</span>
-              )}
+            ) : null}
+          </div>
+          <div className="border-t border-green-500 mb-4 relative">
             </div>
-          )}
 
           {/* MQTT Config Toggle (only for authors) */}
-          {canEdit && (
+          {isAuthor && (
+            <div className="mb-2">
             <button
               onClick={() => setShowMqttConfig(!showMqttConfig)}
-              className="text-xs px-2 py-1 mb-2"
+                className="text-xs px-2 py-1"
             >
               {showMqttConfig ? 'HIDE MQTT CONFIG' : 'EDIT MQTT CONFIG'}
             </button>
+            </div>
           )}
 
           {showMqttConfig && (
@@ -466,9 +531,9 @@ export default function ProjectPage() {
                   lineHeight: '20px',
                 }}
               >
-                {activeControlSet.schemas.map((schema) => (
+                {activeControlSet.schemas.map((schema, index) => (
                   <option key={schema.id} value={schema.id}>
-                    {schema.name}
+                    {`Schema ${index + 1}`}
                   </option>
                 ))}
               </select>
@@ -489,6 +554,8 @@ export default function ProjectPage() {
               onSave={handleSchemaSave}
               currentSchema={activeSchema}
               onCommand={(cmd: string) => sendCommand(cmd)}
+              onDeleteControlSet={handleDeleteControlSet}
+              onCreateControlSet={handleCreateControlSet}
             />
           ) : (
             <DynamicFormRenderer
@@ -529,7 +596,7 @@ export default function ProjectPage() {
           </div>
 
           <div className="border border-green-500 flex flex-col" style={{ height: '300px' }}>
-            <div className="flex-1 overflow-y-auto messages-container p-2">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto messages-container p-2">
               {allMessages.length === 0 ? (
                 <p className="text-sm opacity-70">No messages yet...</p>
               ) : (
@@ -543,6 +610,7 @@ export default function ProjectPage() {
                   </div>
                 ))
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             <div className="border-t border-green-500">

@@ -11,6 +11,8 @@ import { CommandStatus } from './components/CommandStatus';
 import { defaultSchemas } from './defaults/defaultSchemas';
 import { generateCommandId } from './utils/idGenerator';
 
+import { MQTTConfig, MQTT_CONFIG_STORAGE_KEY, createDefaultMQTTConfig } from '@/app/utils/mqttConfig';
+
 export default function Home() {
   const {
     commands,
@@ -18,6 +20,20 @@ export default function Home() {
     parseResponse,
     clearCommands
   } = useCommandTracker();
+
+  // Load MQTT config from localStorage (must be before useMQTT)
+  const [mqttConfig, setMqttConfig] = useState<MQTTConfig | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem(MQTT_CONFIG_STORAGE_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
 
   const { 
     connected: bleConnected, 
@@ -39,7 +55,11 @@ export default function Home() {
     sendServoCommand: sendMQTTCommand,
     publishCommand: publishMQTTCommand,
     clearMessages: clearMQTTMessages
-  } = useMQTT({ onResponse: parseResponse });
+  } = useMQTT({ 
+    onResponse: parseResponse,
+    config: mqttConfig,
+    autoConnect: false, // Don't auto-connect on home page
+  });
 
   const {
     schemas,
@@ -55,6 +75,37 @@ export default function Home() {
   const [provisionSent, setProvisionSent] = useState(false);
   const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
+  const [showMqttConfig, setShowMqttConfig] = useState(false);
+  
+  // Initialize form with saved config or defaults
+  const [mqttConfigForm, setMqttConfigForm] = useState<MQTTConfig>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(MQTT_CONFIG_STORAGE_KEY);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          // Fall through to defaults
+        }
+      }
+    }
+    return createDefaultMQTTConfig();
+  });
+
+  // Only reset form when opening the editor (load from saved config)
+  useEffect(() => {
+    if (showMqttConfig) {
+      const stored = localStorage.getItem(MQTT_CONFIG_STORAGE_KEY);
+      if (stored) {
+        try {
+          const saved = JSON.parse(stored);
+          setMqttConfigForm(saved);
+        } catch {
+          // Keep current form values if parse fails
+        }
+      }
+    }
+  }, [showMqttConfig]); // Only reset when opening the editor
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +119,8 @@ export default function Home() {
   }, [schemas.length]); // Only depend on schemas.length to avoid unnecessary re-runs
 
   const scrollToBottom = () => {
-    // Scroll the messages container internally without affecting viewport scroll
+    // Directly scroll the container to bottom without using scrollIntoView
+    // This prevents iOS from scrolling the viewport
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
@@ -87,19 +139,7 @@ export default function Home() {
     } else if (activeMode === 'mqtt') {
       publishMQTTCommand(commandWithId);
     }
-    
-    // Scroll messages container when a command is sent (without affecting viewport)
-    setTimeout(() => scrollToBottom(), 0);
   };
-
-  // Scroll messages container when new messages arrive (without affecting viewport)
-  useEffect(() => {
-    const currentMessages = activeMode === 'ble' ? bleMessages : mqttMessages;
-    if (currentMessages.length > 0) {
-      scrollToBottom();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bleMessages.length, mqttMessages.length, activeMode]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,9 +205,28 @@ export default function Home() {
     sendCommand(`resume:${commandId}`);
   };
 
+  const handleMqttConfigSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Save to localStorage
+      localStorage.setItem(MQTT_CONFIG_STORAGE_KEY, JSON.stringify(mqttConfigForm));
+      setMqttConfig(mqttConfigForm);
+      setShowMqttConfig(false);
+    } catch (err) {
+      console.error('Failed to save MQTT config:', err);
+      alert('Failed to save MQTT config');
+    }
+  };
+
   const allMessages = [...bleMessages, ...mqttMessages].sort((a, b) => 
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
+
+  // Scroll messages container when new messages arrive or when a command is sent
+  useEffect(() => {
+    scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMessages.length]);
 
   return (
     <div className="min-h-screen p-2">
@@ -208,7 +267,7 @@ export default function Home() {
           </div>
 
           {/* Connection Controls */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-3">
             {activeMode === 'ble' ? (
               <>
                 <button onClick={connectBLE} disabled={bleConnected}>
@@ -220,15 +279,105 @@ export default function Home() {
               </>
             ) : (
               <>
-                <button onClick={connectMQTT} disabled={mqttConnected}>
+                <button onClick={connectMQTT} disabled={mqttConnected || !mqttConfig?.brokerUrl}>
                   CONNECT MQTT
                 </button>
                 <button onClick={disconnectMQTT} disabled={!mqttConnected}>
                   DISCONNECT MQTT
                 </button>
+                <button
+                  onClick={() => setShowMqttConfig(!showMqttConfig)}
+                  className="text-xs px-2 py-1"
+                >
+                  {showMqttConfig ? 'HIDE MQTT CONFIG' : 'EDIT MQTT CONFIG'}
+                </button>
               </>
             )}
           </div>
+
+          {/* MQTT Config Form */}
+          {activeMode === 'mqtt' && showMqttConfig && (
+            <form onSubmit={handleMqttConfigSave} className="border border-green-500 p-3 mb-4">
+              <div className="space-y-2">
+                <div>
+                  <label htmlFor="brokerUrl" className="block text-xs mb-1">
+                    Broker URL
+                  </label>
+                  <input
+                    type="text"
+                    id="brokerUrl"
+                    value={mqttConfigForm.brokerUrl}
+                    onChange={(e) =>
+                      setMqttConfigForm({ ...mqttConfigForm, brokerUrl: e.target.value })
+                    }
+                    className="w-full px-2 py-1 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="username" className="block text-xs mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    value={mqttConfigForm.username}
+                    onChange={(e) =>
+                      setMqttConfigForm({ ...mqttConfigForm, username: e.target.value })
+                    }
+                    className="w-full px-2 py-1 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="block text-xs mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={mqttConfigForm.password}
+                    onChange={(e) =>
+                      setMqttConfigForm({ ...mqttConfigForm, password: e.target.value })
+                    }
+                    className="w-full px-2 py-1 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="commandTopic" className="block text-xs mb-1">
+                    Command Topic
+                  </label>
+                  <input
+                    type="text"
+                    id="commandTopic"
+                    value={mqttConfigForm.commandTopic}
+                    onChange={(e) =>
+                      setMqttConfigForm({ ...mqttConfigForm, commandTopic: e.target.value })
+                    }
+                    className="w-full px-2 py-1 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="statusTopic" className="block text-xs mb-1">
+                    Status Topic
+                  </label>
+                  <input
+                    type="text"
+                    id="statusTopic"
+                    value={mqttConfigForm.statusTopic}
+                    onChange={(e) =>
+                      setMqttConfigForm({ ...mqttConfigForm, statusTopic: e.target.value })
+                    }
+                    className="w-full px-2 py-1 text-sm"
+                    required
+                  />
+                </div>
+                <button type="submit" className="text-xs px-2 py-1">
+                  SAVE MQTT CONFIG
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* WiFi Provisioning Section (BLE Only) */}
@@ -298,9 +447,9 @@ export default function Home() {
                   lineHeight: '20px'
                 }}
               >
-                {schemas.map(schema => (
+                {schemas.map((schema, index) => (
                   <option key={schema.id} value={schema.id}>
-                    {schema.name}
+                    {`Schema ${index + 1}`}
                   </option>
                 ))}
               </select>

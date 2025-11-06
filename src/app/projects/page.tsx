@@ -8,18 +8,12 @@ import { FormSchema } from '@/types/formSchema';
 import { ControlSet } from '@/types/controlSet';
 import { id } from '@instantdb/react';
 import { generateCommandId } from '@/app/utils/idGenerator';
+import { MQTTConfig, getEmptyMQTTConfig } from '@/app/utils/mqttConfig';
 
 interface Project {
   id: string;
   name: string;
-  mqttConfig: {
-    brokerUrl: string;
-    username: string;
-    password: string;
-    commandTopic: string;
-    statusTopic: string;
-    clientId: string;
-  };
+  mqttConfig: MQTTConfig;
   controlSets: ControlSet[];
   schemas?: FormSchema[]; // Backward compatibility
   userId: string;
@@ -36,8 +30,7 @@ export default function ProjectsPage() {
     return (
       <div className="min-h-screen p-2">
         <div className="max-w-4xl mx-auto">
-          <h1 className="retro-title mb-4">Projects</h1>
-          <div className="border-t border-green-500 mb-4"></div>
+          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Projects</h1>
           <div className="text-sm">InstantDB not configured.</div>
         </div>
       </div>
@@ -50,21 +43,19 @@ export default function ProjectsPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Query projects - permissions will automatically filter to user's own projects
+  // Ordered by createdAt descending (newest first)
   const { data } = db.useQuery({
-    projects: {},
+    projects: {
+      $: {
+        order: { createdAt: 'desc' },
+      },
+    },
   });
 
   const projects: Project[] = (data?.projects || []).map((p: any) => ({
     id: p.id,
     name: p.name || '',
-    mqttConfig: p.mqttConfig || {
-      brokerUrl: '',
-      username: '',
-      password: '',
-      commandTopic: 'fible/command',
-      statusTopic: 'fible/status',
-      clientId: '',
-    },
+    mqttConfig: p.mqttConfig || getEmptyMQTTConfig(),
     controlSets: p.controlSets || (p.schemas ? [{ id: 'default', name: 'Default', schemas: p.schemas }] : []),
     schemas: p.schemas, // Keep for backward compatibility
     userId: p.userId || '',
@@ -80,15 +71,6 @@ export default function ProjectsPage() {
 
     setIsCreating(true);
     try {
-      const defaultMqttConfig = {
-        brokerUrl: process.env.NEXT_PUBLIC_MQTT_BROKER_URL || '',
-        username: process.env.NEXT_PUBLIC_MQTT_USERNAME || '',
-        password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || '',
-        commandTopic: 'fible/command',
-        statusTopic: 'fible/status',
-        clientId: `webapp-client-${Math.random().toString(16).slice(2, 10)}`,
-      };
-
       // Create default control sets
       const defaultControlSets: ControlSet[] = [
         {
@@ -175,7 +157,7 @@ export default function ProjectsPage() {
       db.transact(
         db.tx.projects[projectIdValue].update({
           name: projectName.trim(),
-          mqttConfig: defaultMqttConfig,
+          mqttConfig: getEmptyMQTTConfig(),
           controlSets: defaultControlSets,
           userId: user.id,
           public: false,
@@ -218,8 +200,7 @@ export default function ProjectsPage() {
     return (
       <div className="min-h-screen p-2">
         <div className="max-w-4xl mx-auto">
-          <h1 className="retro-title mb-4">Projects</h1>
-          <div className="border-t border-green-500 mb-4"></div>
+          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Projects</h1>
           <div className="text-sm text-red-400">Auth error: {error.message}</div>
         </div>
       </div>
@@ -230,8 +211,7 @@ export default function ProjectsPage() {
     return (
       <div className="min-h-screen p-2">
         <div className="max-w-4xl mx-auto">
-          <h1 className="retro-title mb-4">Projects</h1>
-          <div className="border-t border-green-500 mb-4"></div>
+          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Projects</h1>
           <div className="text-sm">
             Not signed in. <a href="/" className="underline">Go home</a>
           </div>
@@ -243,16 +223,15 @@ export default function ProjectsPage() {
   return (
     <div className="min-h-screen p-2">
       <div className="max-w-4xl mx-auto">
-        <h1 className="retro-title mb-4">Projects</h1>
-        <div className="border-t border-green-500 mb-4"></div>
-
-        <div className="mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-lg font-semibold uppercase tracking-wider">Projects</h1>
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
-            className="text-xs px-2 py-1 mb-2"
+            className="text-xs px-2 py-1"
           >
             {showCreateForm ? 'CANCEL' : '+ CREATE PROJECT'}
           </button>
+        </div>
 
           {showCreateForm && (
             <form onSubmit={createProject} className="border border-green-500 p-3 mb-4">
@@ -280,7 +259,6 @@ export default function ProjectsPage() {
               </button>
             </form>
           )}
-        </div>
 
         <div className="space-y-2">
           {projects.length === 0 ? (

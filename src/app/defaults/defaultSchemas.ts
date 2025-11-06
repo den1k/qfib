@@ -3,7 +3,6 @@ import { FormSchema } from '../../types/formSchema';
 export const defaultSchemas: FormSchema[] = [
   {
     id: 'default-movement',
-    name: 'Movement Controls',
     schema: {
       type: 'object',
       properties: {}
@@ -24,7 +23,6 @@ export const defaultSchemas: FormSchema[] = [
   },
   {
     id: 'advanced-controls',
-    name: 'Advanced Controls',
     schema: {
       type: 'object',
       properties: {
@@ -91,7 +89,6 @@ export const defaultSchemas: FormSchema[] = [
   },
   {
     id: 'dual-servo-controls',
-    name: 'Dual Servo Controls',
     schema: {
       type: 'object',
       properties: {
@@ -143,7 +140,6 @@ export const defaultSchemas: FormSchema[] = [
   },
   {
     id: 'custom-command',
-    name: 'Custom Command',
     schema: {
       type: 'object',
       properties: {

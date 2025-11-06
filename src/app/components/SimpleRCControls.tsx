@@ -12,11 +12,8 @@ export function SimpleRCControls({ onCommand, connected }: SimpleRCControlsProps
 
   const handleButtonClick = (command: string) => {
     if (connected) {
-      // Append speed to command if it's a movement command
-      const movementCommands = ['forward', 'backward', 'rotate'];
-      const isMovementCommand = movementCommands.some(cmd => command.includes(cmd));
-      const finalCommand = isMovementCommand ? `${command};speed=${speed}` : command;
-      onCommand(finalCommand);
+      // Send command as-is, no speed appending
+      onCommand(command);
     }
   };
 
@@ -28,46 +25,102 @@ export function SimpleRCControls({ onCommand, connected }: SimpleRCControlsProps
     }
   };
 
-  // Button configuration for the 3x3 grid
+  // Button configuration for cross layout
   // Layout:
-  // [↖ 45°]  [↑]  [↗ 45°]
-  // [←]     [⏹]  [→]
-  // [↙ 135°]  [↓]  [↘ 135°]
+  //        [↑ forward]
+  // [← left] [⏹ stop] [→ right]
+  //        [↓ back]
   
-  const buttons = [
-    // Row 1
-    { id: 'rotate-left-45', label: '↖', title: 'Rotate Left 45°', command: 'rotate:angle=-45', position: [0, 0] },
-    { id: 'forward', label: '↑', title: 'Forward', command: 'forward', position: [1, 0] },
-    { id: 'rotate-right-45', label: '↗', title: 'Rotate Right 45°', command: 'rotate:angle=45', position: [2, 0] },
-    // Row 2
-    { id: 'rotate-left', label: '←', title: 'Rotate Left (Indefinite)', command: 'rotate:direction=left', position: [0, 1] },
-    { id: 'stop', label: '⏹', title: 'Stop', command: 'stop', position: [1, 1] },
-    { id: 'rotate-right', label: '→', title: 'Rotate Right (Indefinite)', command: 'rotate:direction=right', position: [2, 1] },
-    // Row 3
-    { id: 'rotate-left-135', label: '↙', title: 'Rotate Left 135°', command: 'rotate:angle=-135', position: [0, 2] },
-    { id: 'backward', label: '↓', title: 'Backward', command: 'backward', position: [1, 2] },
-    { id: 'rotate-right-135', label: '↘', title: 'Rotate Right 135°', command: 'rotate:angle=135', position: [2, 2] },
+  const directionButtons = [
+    { id: 'forward', label: '↑', title: 'Forward', command: 'forward', position: 'top' },
+    { id: 'left', label: '←', title: 'Left', command: 'left', position: 'left' },
+    { id: 'stop', label: '⏹', title: 'Stop', command: 'stop', position: 'center' },
+    { id: 'right', label: '→', title: 'Right', command: 'right', position: 'right' },
+    { id: 'back', label: '↓', title: 'Back', command: 'back', position: 'bottom' },
+  ];
+
+  const actionButtons = [
+    { id: 'clean', label: 'Clean', title: 'Clean', command: 'clean' },
+    { id: 'power', label: 'Power', title: 'Power', command: 'power' },
+    { id: 'wake', label: 'Wake', title: 'Wake', command: 'wake' },
+    { id: 'dock', label: 'Dock', title: 'Dock', command: 'dock' }
   ];
 
   return (
     <div className="simple-rc-controls p-4 flex flex-col items-center">
-      {/* 3x3 grid on all screen sizes */}
-      <div className="grid grid-cols-3 gap-2 max-w-[300px]">
-        {buttons.map((button) => (
+      {/* Cross layout for direction buttons */}
+      <div className="relative" style={{ width: '240px', height: '240px' }}>
+        {/* Top row: rotate left, forward, rotate right */}
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 flex gap-2">
           <button
-            key={button.id}
-            onClick={() => handleButtonClick(button.command)}
+            onClick={() => handleButtonClick('rotate:angle=-15')}
             disabled={!connected}
             className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
-            title={button.title}
+            title="Rotate Counterclockwise"
           >
-            {button.label}
+            ↶
           </button>
-        ))}
+          <button
+            onClick={() => handleButtonClick(directionButtons[0].command)}
+            disabled={!connected}
+            className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
+            title={directionButtons[0].title}
+          >
+            {directionButtons[0].label}
+          </button>
+          <button
+            onClick={() => handleButtonClick('rotate:angle=15')}
+            disabled={!connected}
+            className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
+            title="Rotate Clockwise"
+          >
+            ↷
+          </button>
+        </div>
+        
+        {/* Middle row: left, stop, right */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-2">
+          <button
+            onClick={() => handleButtonClick(directionButtons[1].command)}
+            disabled={!connected}
+            className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
+            title={directionButtons[1].title}
+          >
+            {directionButtons[1].label}
+          </button>
+          <button
+            onClick={() => handleButtonClick(directionButtons[2].command)}
+            disabled={!connected}
+            className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
+            title={directionButtons[2].title}
+          >
+            {directionButtons[2].label}
+          </button>
+          <button
+            onClick={() => handleButtonClick(directionButtons[3].command)}
+            disabled={!connected}
+            className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
+            title={directionButtons[3].title}
+          >
+            {directionButtons[3].label}
+          </button>
+        </div>
+        
+        {/* Bottom button */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
+          <button
+            onClick={() => handleButtonClick(directionButtons[4].command)}
+            disabled={!connected}
+            className="simple-rc-button aspect-square w-[80px] h-[80px] text-2xl flex items-center justify-center font-bold"
+            title={directionButtons[4].title}
+          >
+            {directionButtons[4].label}
+          </button>
+        </div>
       </div>
       
       {/* Speed Slider */}
-      <div className="mt-6 flex flex-col items-center" style={{ width: '256px' }}>
+      <div className="mt-8 flex flex-col items-center" style={{ width: '256px' }}>
         <label className="field-label block text-center mb-2">
           Speed: {speed}
         </label>
@@ -86,6 +139,21 @@ export function SimpleRCControls({ onCommand, connected }: SimpleRCControlsProps
             <span>10</span>
           </div>
         </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="mt-8 flex gap-2">
+        {actionButtons.map((button) => (
+          <button
+            key={button.id}
+            onClick={() => handleButtonClick(button.command)}
+            disabled={!connected}
+            className="simple-rc-button px-4 py-2 text-sm font-bold"
+            title={button.title}
+          >
+            {button.label}
+          </button>
+        ))}
       </div>
     </div>
   );

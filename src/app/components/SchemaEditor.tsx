@@ -7,23 +7,22 @@ interface SchemaEditorProps {
   onSave: (schema: FormSchema) => void;
   currentSchema: FormSchema | null;
   onCommand?: (command: string) => void;
+  onDeleteControlSet?: () => void;
+  onCreateControlSet?: () => void;
 }
 
-export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorProps) {
+export function SchemaEditor({ onSave, currentSchema, onCommand, onDeleteControlSet, onCreateControlSet }: SchemaEditorProps) {
   const [jsonText, setJsonText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [schemaName, setSchemaName] = useState('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   useEffect(() => {
     if (currentSchema) {
       setJsonText(JSON.stringify(currentSchema, null, 2));
-      setSchemaName(currentSchema.name);
     } else {
       // Load default schema as template
       const template = defaultSchemas[0];
       setJsonText(JSON.stringify(template, null, 2));
-      setSchemaName(template.name);
     }
   }, [currentSchema]);
 
@@ -32,8 +31,8 @@ export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorP
       const parsed = JSON.parse(text);
       
       // Basic validation
-      if (!parsed.id || !parsed.name || !parsed.schema) {
-        throw new Error('Schema must have id, name, and schema properties');
+      if (!parsed.id || !parsed.schema) {
+        throw new Error('Schema must have id and schema properties');
       }
       
       if (!parsed.config) {
@@ -52,9 +51,9 @@ export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorP
     const schema = validateJson(jsonText);
     
     if (schema) {
-      // Update name if changed
-      if (schemaName !== schema.name) {
-        schema.name = schemaName;
+      // Remove name if it exists - we don't need schema names anymore
+      if (schema.name !== undefined) {
+        delete schema.name;
       }
       
       onSave(schema);
@@ -71,18 +70,26 @@ export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorP
     <div className="schema-editor">
       <div className="editor-header">
         <div className="editor-controls">
-          <input
-            type="text"
-            value={schemaName}
-            onChange={(e) => setSchemaName(e.target.value)}
-            placeholder="Schema Name"
-            className="schema-name-input"
-          />
-          
           <div className="editor-actions">
             <button onClick={handleSave} className="save-button">
               Save Schema
             </button>
+            {onDeleteControlSet && (
+              <button 
+                onClick={onDeleteControlSet}
+                className="delete-button"
+              >
+                Delete Control
+              </button>
+            )}
+            {onCreateControlSet && (
+              <button 
+                onClick={onCreateControlSet}
+                className="new-button"
+              >
+                New Control
+              </button>
+            )}
             <button 
               onClick={() => setIsPreviewMode(!isPreviewMode)}
               className="preview-button"
@@ -136,9 +143,8 @@ export function SchemaEditor({ onSave, currentSchema, onCommand }: SchemaEditorP
         <div className="help-content">
           <p><strong>Basic Structure:</strong></p>
           <pre>{`{
-  "id": "unique-id",
-  "name": "Schema Name",
-  "schema": {
+    "id": "unique-id",
+    "schema": {
     "type": "object",
     "properties": {
       "fieldName": {

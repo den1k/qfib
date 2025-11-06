@@ -576,16 +576,13 @@ export const customWidgets = {
       );
     }
     
-    // Wrap onCommand to optionally update form data if needed
-    // Simple RC controls don't store form data, but we'll call onChange with a string
-    // to satisfy RJSF validation if needed
+    // Wrap onCommand - Simple RC controls handle commands directly
+    // Don't call onChange to avoid triggering form updates that cause re-renders
+    // The widget is a control component, not a form input field
     const handleCommand = (command: string) => {
       onCommand(command);
-      // Update form data with the command string to satisfy validation
-      // Since the schema expects a string type, we'll store the command as a string
-      if (onChange) {
-        onChange(command);
-      }
+      // Explicitly do NOT call onChange here to prevent infinite re-render loops
+      // SimpleRCControls manages its own state and sends commands directly
     };
     
     return (
