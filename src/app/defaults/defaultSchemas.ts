@@ -4,6 +4,7 @@ export const defaultSchemas: FormSchema[] = [
   {
     id: 'default-movement',
     schema: {
+      title: 'Movement Controls',
       type: 'object',
       properties: {}
     },
@@ -24,6 +25,7 @@ export const defaultSchemas: FormSchema[] = [
   {
     id: 'advanced-controls',
     schema: {
+      title: 'Advanced Controls',
       type: 'object',
       properties: {
         angle1: {
@@ -90,6 +92,7 @@ export const defaultSchemas: FormSchema[] = [
   {
     id: 'dual-servo-controls',
     schema: {
+      title: 'Dual Servo Controls',
       type: 'object',
       properties: {
         angle1: {
@@ -141,6 +144,7 @@ export const defaultSchemas: FormSchema[] = [
   {
     id: 'custom-command',
     schema: {
+      title: 'Custom Command',
       type: 'object',
       properties: {
         command: {

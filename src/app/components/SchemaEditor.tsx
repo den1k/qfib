@@ -51,11 +51,6 @@ export function SchemaEditor({ onSave, currentSchema, onCommand, onDeleteControl
     const schema = validateJson(jsonText);
     
     if (schema) {
-      // Remove name if it exists - we don't need schema names anymore
-      if (schema.name !== undefined) {
-        delete schema.name;
-      }
-      
       onSave(schema);
       setError(null);
     }
@@ -145,6 +140,7 @@ export function SchemaEditor({ onSave, currentSchema, onCommand, onDeleteControl
           <pre>{`{
     "id": "unique-id",
     "schema": {
+      "title": "Schema Name",
     "type": "object",
     "properties": {
       "fieldName": {

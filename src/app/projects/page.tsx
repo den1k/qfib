@@ -75,12 +75,11 @@ export default function ProjectsPage() {
       const defaultControlSets: ControlSet[] = [
         {
           id: generateCommandId(),
-          name: 'Default',
           schemas: [
             {
               id: generateCommandId(),
-              name: 'Provisioning & Status',
               schema: {
+                title: 'Default',
                 type: 'object',
                 properties: {
                   ssid: {
@@ -129,12 +128,11 @@ export default function ProjectsPage() {
         },
         {
           id: generateCommandId(),
-          name: 'Movement Controls',
           schemas: [
             {
               id: generateCommandId(),
-              name: 'Movement Controls',
               schema: {
+                title: 'Movement Controls',
                 type: 'object',
                 properties: {},
               },

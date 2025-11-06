@@ -4,7 +4,7 @@ import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { FormSchema } from '../../types/formSchema';
 import { buildCommand, getFieldSendMode, getFieldDebounceMs } from '../utils/commandBuilder';
-import { CustomFieldTemplate, CustomObjectFieldTemplate, CustomTitleField, CustomBaseInputTemplate, CustomButtonTemplates, customWidgets } from './CustomRJSFTheme';
+import { CustomFieldTemplate, CustomObjectFieldTemplate, CustomBaseInputTemplate, CustomButtonTemplates, customWidgets } from './CustomRJSFTheme';
 
 interface DynamicFormRendererProps {
   schema: FormSchema | null;
@@ -166,7 +166,6 @@ export function DynamicFormRenderer({ schema, connected, onCommand }: DynamicFor
         templates={{
           FieldTemplate: CustomFieldTemplate,
           ObjectFieldTemplate: CustomObjectFieldTemplate,
-          TitleFieldTemplate: CustomTitleField,
           BaseInputTemplate: CustomBaseInputTemplate,
           ButtonTemplates: conditionalButtonTemplates
         }}

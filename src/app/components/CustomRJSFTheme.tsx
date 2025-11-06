@@ -1,5 +1,5 @@
 import React from 'react';
-import { FieldTemplateProps, ObjectFieldTemplateProps, TitleFieldProps, BaseInputTemplateProps } from '@rjsf/utils';
+import { FieldTemplateProps, ObjectFieldTemplateProps, BaseInputTemplateProps } from '@rjsf/utils';
 import { SimpleRCControls } from './SimpleRCControls';
 
 // Custom Field Template
@@ -114,9 +114,6 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
 
     return (
       <div className="object-field movement-controls">
-        {title && (
-          <h3 className="object-title">{title}</h3>
-        )}
         {description && (
           <div className="object-description">{description}</div>
         )}
@@ -218,9 +215,6 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
 
     return (
       <div className="object-field">
-        {title && (
-          <h3 className="object-title">{title}</h3>
-        )}
         {description && (
           <div className="object-description">{description}</div>
         )}
@@ -245,9 +239,6 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
 
   return (
     <div className="object-field">
-      {title && (
-        <h3 className="object-title">{title}</h3>
-      )}
       {description && (
         <div className="object-description">{description}</div>
       )}
@@ -255,18 +246,6 @@ export function CustomObjectFieldTemplate(props: ObjectFieldTemplateProps) {
         {properties.map((prop) => prop.content)}
       </div>
     </div>
-  );
-}
-
-// Custom Title Field
-export function CustomTitleField(props: TitleFieldProps) {
-  const { id, title, required } = props;
-  
-  return (
-    <h2 id={id} className="title-field">
-      {title}
-      {required && <span className="required">*</span>}
-    </h2>
   );
 }
 

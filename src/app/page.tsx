@@ -449,7 +449,7 @@ export default function Home() {
               >
                 {schemas.map((schema, index) => (
                   <option key={schema.id} value={schema.id}>
-                    {`Schema ${index + 1}`}
+                    {(schema.schema as any)?.title || `Schema ${index + 1}`}
                   </option>
                 ))}
               </select>

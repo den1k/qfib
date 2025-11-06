@@ -156,7 +156,8 @@ export default function ProjectPage() {
       return;
     }
     
-    if (!confirm(`Delete control set "${activeControlSet.name}"? This will delete all schemas in it.`)) {
+    const controlSetName = activeControlSet.schemas[0]?.schema && (activeControlSet.schemas[0].schema as any)?.title || activeControlSet.name || 'Untitled';
+    if (!confirm(`Delete control set "${controlSetName}"? This will delete all schemas in it.`)) {
       return;
     }
     
@@ -184,13 +185,14 @@ export default function ProjectPage() {
     }
     
     const newSchemaId = generateCommandId();
+    const schemaTitle = newControlSetName.trim();
     const newControlSet: ControlSet = {
       id: generateCommandId(),
-      name: newControlSetName.trim(),
       schemas: [
         {
           id: newSchemaId,
           schema: {
+            title: schemaTitle,
             type: 'object',
             properties: {}
           },
@@ -513,11 +515,15 @@ export default function ProjectPage() {
                   lineHeight: '20px',
                 }}
               >
-                {controlSets.map((cs) => (
-                  <option key={cs.id} value={cs.id}>
-                    {cs.name}
-                  </option>
-                ))}
+                {controlSets.map((cs) => {
+                  // Use schema title as source of truth, fallback to control set name
+                  const schemaTitle = cs.schemas[0]?.schema && (cs.schemas[0].schema as any)?.title;
+                  return (
+                    <option key={cs.id} value={cs.id}>
+                      {schemaTitle || cs.name}
+                    </option>
+                  );
+                })}
               </select>
             )}
             {activeControlSet && activeControlSet.schemas.length > 1 && (
@@ -533,7 +539,7 @@ export default function ProjectPage() {
               >
                 {activeControlSet.schemas.map((schema, index) => (
                   <option key={schema.id} value={schema.id}>
-                    {`Schema ${index + 1}`}
+                    {(schema.schema as any)?.title || `Schema ${index + 1}`}
                   </option>
                 ))}
               </select>
