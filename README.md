@@ -1,10 +1,8 @@
-## qfib - BLE Microcontroller Control App
-
-q(ueue) (wi)fi b(luetooth)
+## mrln - BLE Microcontroller Control App
 
 This is a Next.js web app for controlling ESP32 microcontrollers over Bluetooth Low Energy (BLE) using the Web Bluetooth API.
 
-🌐 **Live Demo**: [https://qfib.netlify.app/](https://qfib.netlify.app/)
+🌐 **Live Demo**: [https://mrln.netlify.app/](https://mrln.netlify.app/)
 
 ### Features
 - Scan and connect to ESP32 devices (filtered by "ESP" name prefix).
@@ -67,6 +65,6 @@ npm install
 NEXT_PUBLIC_INSTANT_APP_ID=<your_instantdb_app_id>
 ```
 
-We created an app for you already: `Qfib` (`9f0d6a11-e98c-4af3-a8be-a776df6c973b`). You can use that ID locally, or replace it with your own.
+We created an app for you already: `Mrln` (`9f0d6a11-e98c-4af3-a8be-a776df6c973b`). You can use that ID locally, or replace it with your own.
 
 The client initializer lives at `src/app/utils/instantdb.ts` and reads `NEXT_PUBLIC_INSTANT_APP_ID`.

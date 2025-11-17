@@ -17,7 +17,7 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "qfib - ESP32 BLE Controller",
+  title: "mrln - ESP32 BLE Controller",
   description: "Control ESP32 devices via Bluetooth Low Energy and WebSocket",
 };
 

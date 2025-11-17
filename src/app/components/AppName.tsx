@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const ANIMATION_RUN_KEY = 'qfib-app-name-animated';
+const ANIMATION_RUN_KEY = 'mrln-app-name-animated';
 
 export function AppName() {
   const linkRef = useRef<HTMLAnchorElement>(null);
@@ -55,7 +55,7 @@ export function AppName() {
       href="/" 
       className={shouldAnimate ? "app-name mb-0 leading-none" : "app-name-final mb-0 leading-none"}
     >
-      qfiB
+      mrln
     </a>
   );
 }

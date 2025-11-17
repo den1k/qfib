@@ -7,14 +7,14 @@ export interface MQTTConfig {
   clientId: string;
 }
 
-export const MQTT_CONFIG_STORAGE_KEY = 'qfib-mqtt-config';
+export const MQTT_CONFIG_STORAGE_KEY = 'mrln-mqtt-config';
 
 export const DEFAULT_MQTT_CONFIG: Omit<MQTTConfig, 'clientId'> = {
   brokerUrl: '',
   username: '',
   password: '',
-  commandTopic: 'qfib/command',
-  statusTopic: 'qfib/status',
+  commandTopic: 'mrln/command',
+  statusTopic: 'mrln/status',
 };
 
 export function createDefaultMQTTConfig(): MQTTConfig {

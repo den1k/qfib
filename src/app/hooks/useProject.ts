@@ -19,7 +19,7 @@ export interface Project {
   updatedAt: number;
 }
 
-const ACTIVE_PROJECT_KEY = 'qfib-active-project';
+const ACTIVE_PROJECT_KEY = 'mrln-active-project';
 
 export function useProject(projectId?: string) {
   // useAuth can be called even when unauthenticated - it will return null user
