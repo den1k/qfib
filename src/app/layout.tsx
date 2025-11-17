@@ -17,8 +17,8 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "mrln - ESP32 BLE Controller",
-  description: "Control ESP32 devices via Bluetooth Low Energy and WebSocket",
+  title: "mrln - The Microcontroller Controller",
+  description: "Control Microcontrollers via Bluetooth and MQTT",
 };
 
 export default function RootLayout({
