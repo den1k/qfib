@@ -72,9 +72,6 @@ export default function AuthMenu() {
       <div className="flex items-center gap-2">
         <a href="/projects" className="text-xs underline opacity-90">Projects</a>
         <a href="/profile" className="text-xs underline opacity-90">Profile</a>
-        <button onClick={() => db.auth.signOut()} className="text-xs px-2 py-1">
-          Sign out
-        </button>
       </div>
     );
   }
