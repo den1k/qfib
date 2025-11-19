@@ -78,51 +78,49 @@ export default function ProjectsPage() {
           schemas: [
             {
               id: generateCommandId(),
-              schema: {
-                title: 'Default',
-                type: 'object',
-                properties: {
-                  ssid: {
-                    type: 'string',
-                    title: 'WiFi SSID',
-                    'x-sendMode': 'never',
-                    'x-group': 'WiFi Provisioning',
-                  },
-                  password: {
-                    type: 'string',
-                    title: 'WiFi Password',
-                    'x-sendMode': 'never',
-                    'x-group': 'WiFi Provisioning',
-                  },
-                },
-              },
-              uiSchema: {
-                password: {
-                  'ui:widget': 'password',
-                },
-                ssid: {
-                  'ui:options': {
-                    autocomplete: 'off',
-                  },
-                },
-              },
-              config: {
+              type: 'html',
+              html: `<div class="flex flex-col items-center p-4">
+  <h2 class="text-lg font-semibold mb-4">WiFi Setup</h2>
+
+  <div class="space-y-4 max-w-sm mx-auto">
+    <div>
+      <label class="block text-sm font-medium mb-2">Network Name (SSID):</label>
+      <input
+        type="text"
+        data-field="ssid"
+        class="w-full"
+        placeholder="Enter WiFi network name"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-2">Password:</label>
+      <input
+        type="password"
+        data-field="password"
+        class="w-full"
+        placeholder="Enter WiFi password"
+      />
+    </div>
+
+    <button
+      type="submit"
+      data-command="PROVISION:ssid={ssid};pass={password}"
+      data-send-mode="onSubmit"
+      class="w-full py-2 px-4 font-medium"
+    >
+      Connect to WiFi
+    </button>
+  </div>
+</div>`,
+              htmlConfig: {
                 globalSendMode: 'onSubmit',
-                customButtons: [
-                  {
-                    id: 'provision-wifi',
-                    label: '📡 Provision WiFi',
-                    command: 'PROVISION:FORM_SUBMIT', // Special marker for form submission
-                    group: 'WiFi',
-                  },
-                  {
-                    id: 'get-status',
-                    label: '📊 Get Status',
-                    command: 'status',
-                    group: 'Device',
-                  },
-                ],
+                debounceMs: 300
               },
+              schema: {
+                title: 'WiFi Provisioning',
+                type: 'object'
+              }
             },
           ],
         },
@@ -131,20 +129,33 @@ export default function ProjectsPage() {
           schemas: [
             {
               id: generateCommandId(),
+              type: 'html',
+              html: `<div class="space-y-4 p-4">
+  <h3 class="text-lg font-semibold mb-4">Servo Controls</h3>
+
+  <div class="grid grid-cols-2 gap-2">
+    <button data-command="smoothMove:angle=0;duration=3000;servo=1" class="px-3 py-2 text-sm font-medium">
+      🐌 Open Slowly
+    </button>
+    <button data-command="smoothMove:angle=180;duration=3000;servo=1" class="px-3 py-2 text-sm font-medium">
+      🐌 Close Slowly
+    </button>
+    <button data-command="smoothMove:angle=0;duration=100;servo=1" class="px-3 py-2 text-sm font-medium">
+      ⚡ Open Fast
+    </button>
+    <button data-command="smoothMove:angle=180;duration=100;servo=1" class="px-3 py-2 text-sm font-medium">
+      ⚡ Close Fast
+    </button>
+  </div>
+</div>`,
+              htmlConfig: {
+                globalSendMode: 'immediate',
+                debounceMs: 300
+              },
               schema: {
                 title: 'Movement Controls',
-                type: 'object',
-                properties: {},
-              },
-              config: {
-                globalSendMode: 'immediate',
-                customButtons: [
-                  { id: 'servo1-openSlow', label: '🐌 Open Slowly', command: 'smoothMove:angle=0;duration=3000;servo=1', group: 'Servo 1' },
-                  { id: 'servo1-closeSlow', label: '🐌 Close Slowly', command: 'smoothMove:angle=180;duration=3000;servo=1', group: 'Servo 1' },
-                  { id: 'servo1-openFast', label: '⚡ Open Fast', command: 'smoothMove:angle=0;duration=100;servo=1', group: 'Servo 1' },
-                  { id: 'servo1-closeFast', label: '⚡ Close Fast', command: 'smoothMove:angle=180;duration=100;servo=1', group: 'Servo 1' },
-                ],
-              },
+                type: 'object'
+              }
             },
           ],
         },

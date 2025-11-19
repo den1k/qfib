@@ -5,10 +5,10 @@ import { useBLE } from './hooks/useBLE';
 import { useMQTT } from './hooks/useMQTT';
 import { useFormSchema } from './hooks/useFormSchema';
 import { useCommandTracker } from './hooks/useCommandTracker';
-import { DynamicFormRenderer } from './components/DynamicFormRenderer';
 import { SchemaEditor } from './components/SchemaEditor';
+import { HTMLControlRenderer } from './components/HTMLControlRenderer';
 import { CommandStatus } from './components/CommandStatus';
-import { defaultSchemas } from './defaults/defaultSchemas';
+import { defaultHTMLControls } from './defaults/defaultHTMLControls';
 import { generateCommandId } from './utils/idGenerator';
 
 import { MQTTConfig, MQTT_CONFIG_STORAGE_KEY, createDefaultMQTTConfig } from '@/app/utils/mqttConfig';
@@ -64,18 +64,34 @@ export default function Home() {
   const {
     schemas,
     activeSchema,
+    activeSchemaId,
     saveSchema,
     deleteSchema,
     setActiveSchema
   } = useFormSchema();
   
   const [input, setInput] = useState('');
-  const [ssid, setSsid] = useState('');
-  const [password, setPassword] = useState('');
-  const [provisionSent, setProvisionSent] = useState(false);
-  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
+  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>(() => {
+    // Default to BLE if no MQTT broker is configured
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(MQTT_CONFIG_STORAGE_KEY);
+      if (stored) {
+        try {
+          const config = JSON.parse(stored);
+          if (config.broker && config.broker.trim()) {
+            return 'mqtt';
+          }
+        } catch {
+          // Fall through to BLE default
+        }
+      }
+    }
+    return 'ble';
+  });
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [showMqttConfig, setShowMqttConfig] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
   
   // Initialize form with saved config or defaults
   const [mqttConfigForm, setMqttConfigForm] = useState<MQTTConfig>(() => {
@@ -109,14 +125,34 @@ export default function Home() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const hasInitializedWifiRef = useRef(false);
 
-  // Initialize default schemas if none exist
+  // Ensure all default schemas are available and WiFi is active on initial load only
   useEffect(() => {
-    if (schemas.length === 0) {
-      defaultSchemas.forEach(schema => saveSchema(schema));
+    console.log('Schemas length:', schemas.length, 'Active schema ID:', activeSchemaId);
+
+    // Ensure all default schemas exist
+    defaultHTMLControls.forEach(defaultSchema => {
+      const existingSchema = schemas.find(s => s.id === defaultSchema.id);
+      if (!existingSchema) {
+        console.log('Adding missing schema:', defaultSchema.id);
+        saveSchema(defaultSchema);
+      }
+    });
+
+    // Only set WiFi as active once on initial load if there's no active schema
+    if (!hasInitializedWifiRef.current) {
+      const wifiSchema = schemas.find(s => s.id === 'wifi-provisioning');
+      if (wifiSchema && !activeSchemaId) {
+        console.log('Setting WiFi as active schema on initial load:', wifiSchema.id);
+        setActiveSchema(wifiSchema.id);
+        hasInitializedWifiRef.current = true;
+      } else if (activeSchemaId) {
+        // If there's already an active schema, mark as initialized
+        hasInitializedWifiRef.current = true;
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schemas.length]); // Only depend on schemas.length to avoid unnecessary re-runs
+  }, [schemas, activeSchemaId, saveSchema, setActiveSchema]);
 
   const scrollToBottom = () => {
     // Directly scroll the container to bottom without using scrollIntoView
@@ -149,21 +185,6 @@ export default function Home() {
     }
   };
 
-  const handleProvision = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bleConnected || !ssid || !password) {
-      alert('Connect to device via BLE and fill WiFi credentials');
-      return;
-    }
-
-    const provisionCommand = `PROVISION:ssid=${ssid};pass=${password}`;
-    const cmdId = generateCommandId();
-    const commandWithId = `${cmdId}:${provisionCommand}`;
-    
-    trackCommand(cmdId, provisionCommand, 'ble');
-    sendBLECommand(commandWithId);
-    setProvisionSent(true);
-  };
 
   const handleSchemaSave = (schema: any) => {
     saveSchema(schema);
@@ -380,56 +401,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* WiFi Provisioning Section (BLE Only) */}
-        {activeMode === 'ble' && (
-          <div className="mb-4 mt-4">
-            <h3 className="text-sm font-semibold mb-2 uppercase tracking-wider opacity-80">WiFi Provisioning</h3>
-            
-            <form onSubmit={handleProvision} className="space-y-2">
-              <div>
-                <label htmlFor="ssid" className="block text-xs mb-1">
-                  SSID
-                </label>
-                <input
-                  type="text"
-                  id="ssid"
-                  value={ssid}
-                  onChange={(e) => setSsid(e.target.value)}
-                  className="w-full px-2 py-1 text-sm"
-                  placeholder="WiFi network name"
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-xs mb-1">
-                  PASSWORD
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-2 py-1 text-sm"
-                  placeholder="WiFi password"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={!bleConnected || !ssid || !password}
-              >
-                PROVISION ESP32
-              </button>
-            </form>
-            
-            {provisionSent && (
-              <div className="mt-2 text-xs opacity-80">
-                ✓ Provisioning command sent! ESP32 will reboot and connect to WiFi.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="border-t border-green-500 mb-4"></div>
 
         {/* Control Section */}
         <div className="mb-4">
@@ -459,7 +430,7 @@ export default function Home() {
               className="text-xs px-2 py-1"
               style={{ height: '24px' }}
             >
-              {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT SCHEMA'}
+              {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT'}
             </button>
           </div>
           
@@ -468,13 +439,23 @@ export default function Home() {
               onSave={handleSchemaSave}
               currentSchema={activeSchema}
               onCommand={(cmd: string) => sendCommand(cmd)}
+              aiPrompt={aiPrompt}
+              setAiPrompt={setAiPrompt}
+              aiGenerating={aiGenerating}
+              setAiGenerating={setAiGenerating}
+              connected={activeMode === 'ble' ? bleConnected : mqttConnected}
             />
-          ) : (
-            <DynamicFormRenderer
-              schema={activeSchema}
+          ) : activeSchema ? (
+            <HTMLControlRenderer
+              html={activeSchema.html || ''}
+              config={activeSchema.htmlConfig || {}}
               connected={activeMode === 'ble' ? bleConnected : mqttConnected}
               onCommand={sendCommand}
             />
+          ) : (
+            <div className="no-schema">
+              <p>No control selected.</p>
+            </div>
           )}
         </div>
 

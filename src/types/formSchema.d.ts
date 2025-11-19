@@ -1,41 +1,35 @@
-import { RJSFSchema, UiSchema } from '@rjsf/utils';
-
 export interface FormSchema {
   id: string;
-  schema: RJSFSchema;
-  uiSchema?: UiSchema;
-  config: FormConfig;
+  type: 'html';
+  html: string;
+  htmlConfig?: HTMLControlConfig;
+  schema: {
+    title: string;
+    type: 'object';
+    properties?: Record<string, unknown>;
+  };
+  aiHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
-export interface FormConfig {
-  globalSendMode: 'immediate' | 'debounced' | 'onSubmit';
+export interface HTMLControlConfig {
   debounceMs?: number;
-  customButtons?: Array<{
-    id: string;
-    label: string;
-    command: string;
-    group?: string;
-  }>;
-}
-
-export interface FieldCommandConfig {
-  command?: string; // Template like "smoothMove:angle={value};duration={duration}"
-  sendMode?: 'immediate' | 'debounced' | 'onSubmit';
-  debounceMs?: number;
-}
-
-export interface CommandMap {
-  [key: string]: string;
-}
-
-export interface ExtendedRJSFSchema extends RJSFSchema {
-  'x-command'?: string;
-  'x-sendMode'?: 'immediate' | 'debounced' | 'onSubmit' | 'never';
-  'x-debounceMs'?: number;
-  'x-commandMap'?: CommandMap;
-  'x-group'?: string;
+  throttleMs?: number;
+  globalSendMode?: 'immediate' | 'debounced' | 'throttle' | 'onSubmit';
 }
 
 export interface FormData {
   [key: string]: any;
+}
+
+export type CommandMap = Record<string, string>;
+
+export interface ExtendedRJSFSchema {
+  title?: string;
+  type?: 'object';
+  properties?: Record<string, {
+    type?: string;
+    title?: string;
+    // Add other common RJSF schema properties as needed
+  }>;
+  required?: string[];
 }

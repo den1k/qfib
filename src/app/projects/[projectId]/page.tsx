@@ -8,7 +8,7 @@ import { useProject } from '@/app/hooks/useProject';
 import { useMQTT } from '@/app/hooks/useMQTT';
 import { useBLE } from '@/app/hooks/useBLE';
 import { useCommandTracker } from '@/app/hooks/useCommandTracker';
-import { DynamicFormRenderer } from '@/app/components/DynamicFormRenderer';
+import { HTMLControlRenderer } from '@/app/components/HTMLControlRenderer';
 import { SchemaEditor } from '@/app/components/SchemaEditor';
 import { CommandStatus } from '@/app/components/CommandStatus';
 import { generateCommandId } from '@/app/utils/idGenerator';
@@ -70,14 +70,16 @@ export default function ProjectPage() {
   const controlSets: ControlSet[] = project?.controlSets || [];
 
   const [activeControlSetId, setActiveControlSetId] = useState<string>('');
-  const [activeSchemaId, setActiveSchemaId] = useState<string>('');
   const [input, setInput] = useState('');
-  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('mqtt');
+  const [activeMode, setActiveMode] = useState<'ble' | 'mqtt'>('ble');  // Default to BLE
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [showMqttConfig, setShowMqttConfig] = useState(false);
   const [mqttConfigForm, setMqttConfigForm] = useState(() => 
     mqttConfig || createDefaultMQTTConfig()
   );
+
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -99,9 +101,6 @@ export default function ProjectPage() {
   useEffect(() => {
     if (controlSets.length > 0 && !activeControlSetId) {
       setActiveControlSetId(controlSets[0].id);
-      if (controlSets[0].schemas.length > 0) {
-        setActiveSchemaId(controlSets[0].schemas[0].id);
-      }
     }
   }, [controlSets, activeControlSetId]);
 
@@ -118,6 +117,16 @@ export default function ProjectPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allMessages.length]);
 
+  useEffect(() => {
+    if (project) {
+      if (project.mqttConfig?.brokerUrl) {
+        setActiveMode('mqtt');
+      } else {
+        setActiveMode('ble');
+      }
+    }
+  }, [project]);
+
   // Now handle early returns AFTER all hooks are called
   if (!projectId) {
     return (
@@ -132,16 +141,12 @@ export default function ProjectPage() {
   const canEdit = isAuthor; // Only authors can edit
 
   const activeControlSet = controlSets.find(cs => cs.id === activeControlSetId);
-  const activeSchema = activeControlSet?.schemas.find(s => s.id === activeSchemaId) || activeControlSet?.schemas[0] || null;
+  const activeSchema = activeControlSet?.schemas[0] || null;  // Always the first/single
 
   const handleSchemaSave = async (schema: FormSchema) => {
     if (!activeControlSet) return;
     
-    const updatedSchemas = activeControlSet.schemas.map(s => s.id === schema.id ? schema : s);
-    if (!updatedSchemas.find(s => s.id === schema.id)) {
-      updatedSchemas.push(schema);
-    }
-    
+    const updatedSchemas = [schema];  // Single schema per set
     const updatedControlSets = controlSets.map(cs => 
       cs.id === activeControlSetId ? { ...cs, schemas: updatedSchemas } : cs
     );
@@ -168,36 +173,36 @@ export default function ProjectPage() {
     if (updatedControlSets.length > 0) {
       setActiveControlSetId(updatedControlSets[0].id);
       if (updatedControlSets[0].schemas.length > 0) {
-        setActiveSchemaId(updatedControlSets[0].schemas[0].id);
+        // setActiveSchemaId(updatedControlSets[0].schemas[0].id); // Removed
       } else {
-        setActiveSchemaId('');
+        // setActiveSchemaId(''); // Removed
       }
     } else {
       setActiveControlSetId('');
-      setActiveSchemaId('');
+      // setActiveSchemaId(''); // Removed
     }
   };
 
   const handleCreateControlSet = async () => {
-    const newControlSetName = prompt('Enter name for new control set:');
-    if (!newControlSetName || !newControlSetName.trim()) {
-      return;
-    }
-    
+    const schemaTitle = 'New Control';
     const newSchemaId = generateCommandId();
-    const schemaTitle = newControlSetName.trim();
     const newControlSet: ControlSet = {
       id: generateCommandId(),
       schemas: [
         {
           id: newSchemaId,
+          type: 'html',
+          html: `<div class="flex flex-col items-center p-4">
+  <h2 class="text-lg font-semibold mb-4">${schemaTitle}</h2>
+  <p class="text-center opacity-70">Click "Edit" to customize this control.</p>
+</div>`,
+          htmlConfig: {
+            globalSendMode: 'immediate',
+            debounceMs: 300
+          },
           schema: {
             title: schemaTitle,
-            type: 'object',
-            properties: {}
-          },
-          config: {
-            globalSendMode: 'onSubmit'
+            type: 'object'
           }
         }
       ]
@@ -206,61 +211,123 @@ export default function ProjectPage() {
     const updatedControlSets = [...controlSets, newControlSet];
     await updateControlSets(updatedControlSets);
     
-    // Switch to the new control set
     setActiveControlSetId(newControlSet.id);
-    setActiveSchemaId(newSchemaId);
-    setShowSchemaEditor(true);
+    setShowSchemaEditor(true);  // Open editor for the new single schema
   };
 
+  const handleGenerateUI = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiGenerating(true);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen p-2 flex items-center justify-center">
-        <div className="text-sm">Loading project data...</div>
-      </div>
-    );
-  }
+    const controller = new AbortController();  // For timeout/cancel
+    const timeoutId = setTimeout(() => controller.abort(), 10000);  // 10s timeout
 
-  // Check if user needs to be signed in (only for private projects)
-  // Note: We check this before checking if project exists, because if it's private and user isn't signed in,
-  // the query won't return it, so project will be null
-  if (!isLoading && !project) {
-    // If we're still loading, wait. Otherwise, project not found or not accessible
-    return (
-      <div className="min-h-screen p-2">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Project</h1>
-          <div className="text-sm">
-            Project not found or you don't have access to it.
-          </div>
-          <Link href="/projects" className="text-xs underline">Back to Projects</Link>
-        </div>
-      </div>
-    );
-  }
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    try {
+      console.log('Starting client stream for prompt:', aiPrompt.substring(0, 50) + '...');
 
-  // If project exists but is private and user is not signed in
-  if (project && !project.public && !user) {
-    return (
-      <div className="min-h-screen p-2">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-lg font-semibold mb-4 uppercase tracking-wider">Project</h1>
-          <div className="text-sm">
-            This project is private. Please sign in to view it. <a href="/" className="underline">Go home</a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+      const requestBody = {
+        prompt: aiPrompt,
+        contextHtml: activeSchema?.html || ''
+      };
 
-  // If no project yet, show loading
-  if (!project) {
-    return (
-      <div className="min-h-screen p-2 flex items-center justify-center">
-        <div className="text-sm">Loading project data...</div>
-      </div>
-    );
-  }
+      const response = await fetch('/api/generate-ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      console.log('Stream response status:', response.status, response.headers.get('content-type'));  // Log response
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+      if (!response.body) throw new Error('No response body');
+
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';  // For accumulating partial lines across chunks
+
+      while (true) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log('Client stream done, processing buffer');
+            break;
+          }
+
+          if (!value) continue;
+
+          buffer += decoder.decode(value, { stream: true });
+          console.log('Client chunk length:', value.length, 'Buffer size:', buffer.length);  // Log progress
+
+          // Process complete lines from buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';  // Keep incomplete line for next chunk
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6).trim();
+              console.log('Client parsed event:', dataStr.substring(0, 100) + '...');
+
+              if (dataStr === '[DONE]') {
+                console.log('Client [DONE] received');
+                continue;
+              }
+
+              try {
+                const data = JSON.parse(dataStr);
+                if (data.type === 'partial') {
+                  console.log('Partial update, length:', data.html.length);
+                  // setPartialHtml(data.html); // No longer needed
+                } else if (data.type === 'complete') {
+                  console.log('Complete received, length:', data.html.length);
+                  // setGeneratedHtml(data.html); // No longer needed
+                  // setPartialHtml(''); // No longer needed
+                  // Update the active schema's HTML
+                  if (activeSchema) {
+                    const updatedSchemas = activeControlSet?.schemas.map(s => s.id === activeSchema.id ? { ...s, html: data.html } : s);
+                    if (updatedSchemas) {
+                      const updatedControlSets = controlSets.map(cs => cs.id === activeControlSetId ? { ...cs, schemas: updatedSchemas } : cs);
+                      await updateControlSets(updatedControlSets);
+                    }
+                  }
+                } else if (data.type === 'error') {
+                  console.error('Stream error:', data.message);
+                  alert(`Generation error: ${data.message}`);
+                  setAiGenerating(false);
+                  return;
+                }
+              } catch (parseErr) {
+                console.warn('Client parse error:', parseErr, 'on:', dataStr);
+              }
+            }
+          }
+        } catch (readErr: unknown) {
+          const err = readErr as Error;
+          if (err.name === 'AbortError') {
+            console.log('Stream aborted (timeout)');
+            alert('Generation timed out – try a simpler prompt.');
+          } else {
+            throw err;
+          }
+        }
+      }
+      console.log('Client stream fully processed');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Client generation error:', err);
+      if (err.name !== 'AbortError') {
+        alert('Failed to generate UI: ' + err.message);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      setAiGenerating(false);
+      if (reader) {
+        reader.releaseLock();  // Clean up
+      }
+    }
+  };
 
   const sendCommand = (command: string) => {
     const cmdId = generateCommandId();
@@ -306,6 +373,14 @@ export default function ProjectPage() {
     clearMQTTMessages();
   };
 
+  if (!project) {
+    return (
+      <div className="min-h-screen p-2 flex items-center justify-center">
+        <div className="text-sm">Project not found or loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-2">
       <div className="max-w-4xl mx-auto">
@@ -316,7 +391,7 @@ export default function ProjectPage() {
             <div className="text-sm" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
               <span className="opacity-60">{'>'}</span>{' '}
               <span>project:</span>{' '}
-              <span>{project.name}</span>
+              <span>{project?.name || 'Untitled Project'}</span>
             </div>
             {/* Show view only indicator if viewing a public project */}
             {isPublicProject && !isAuthor ? (
@@ -496,79 +571,86 @@ export default function ProjectPage() {
         {/* Control Section */}
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-3 uppercase tracking-wider">Control</h2>
-
           <div className="flex gap-2 items-center mb-2">
             {controlSets.length > 1 && (
               <select
                 value={activeControlSetId}
                 onChange={(e) => {
                   setActiveControlSetId(e.target.value);
-                  const controlSet = controlSets.find(cs => cs.id === e.target.value);
-                  if (controlSet && controlSet.schemas.length > 0) {
-                    setActiveSchemaId(controlSet.schemas[0].id);
-                  }
                 }}
                 className="text-xs"
-                style={{
-                  height: '24px',
-                  padding: '2px 20px 2px 4px',
-                  lineHeight: '20px',
-                }}
+                style={{ height: '24px', padding: '2px 20px 2px 4px', lineHeight: '20px' }}
               >
-                {controlSets.map((cs) => {
-                  // Use schema title as source of truth, fallback to control set name
-                  const schemaTitle = cs.schemas[0]?.schema && (cs.schemas[0].schema as any)?.title;
-                  return (
-                    <option key={cs.id} value={cs.id}>
-                      {schemaTitle || cs.name}
-                    </option>
-                  );
-                })}
-              </select>
-            )}
-            {activeControlSet && activeControlSet.schemas.length > 1 && (
-              <select
-                value={activeSchemaId}
-                onChange={(e) => setActiveSchemaId(e.target.value)}
-                className="text-xs"
-                style={{
-                  height: '24px',
-                  padding: '2px 20px 2px 4px',
-                  lineHeight: '20px',
-                }}
-              >
-                {activeControlSet.schemas.map((schema, index) => (
-                  <option key={schema.id} value={schema.id}>
-                    {(schema.schema as any)?.title || `Schema ${index + 1}`}
-                  </option>
+                {controlSets.map((cs) => (
+                  <option key={cs.id} value={cs.id}>
+                  {cs.schemas[0]?.schema?.title || cs.name || 'Untitled'}
+                </option>
                 ))}
               </select>
             )}
             {canEdit && (
-              <button
-                onClick={() => setShowSchemaEditor(!showSchemaEditor)}
-                className="text-xs px-2 py-1"
-                style={{ height: '24px' }}
-              >
-                {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT SCHEMA'}
-              </button>
+              <div className="flex gap-2 items-center ml-auto">
+                {showSchemaEditor && (
+                  <>
+                    <button
+                      onClick={handleDeleteControlSet}
+                      disabled={controlSets.length <= 1}
+                      className="text-xs px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ height: '24px' }}
+                    >
+                      Delete Control
+                    </button>
+                    <button
+                      onClick={handleCreateControlSet}
+                      className="text-xs px-2 py-1"
+                      style={{ height: '24px' }}
+                    >
+                      New Control
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setShowSchemaEditor(!showSchemaEditor)}
+                  className="text-xs px-2 py-1"
+                  style={{ height: '24px' }}
+                >
+                  {showSchemaEditor ? 'HIDE EDITOR' : 'EDIT'}
+                </button>
+              </div>
             )}
           </div>
-
           {showSchemaEditor && canEdit ? (
+            <>
+              
+              {/* Editor below with inline AI */}
             <SchemaEditor
               onSave={handleSchemaSave}
               currentSchema={activeSchema}
               onCommand={(cmd: string) => sendCommand(cmd)}
               onDeleteControlSet={handleDeleteControlSet}
               onCreateControlSet={handleCreateControlSet}
+                aiPrompt={aiPrompt}
+                setAiPrompt={setAiPrompt}
+                aiGenerating={aiGenerating}
+                setAiGenerating={setAiGenerating}
+                onClose={() => setShowSchemaEditor(false)}
+                connected={activeMode === 'ble' ? bleConnected : mqttConnected}  // Pass real connected status
             />
-          ) : (
-            <DynamicFormRenderer
-              schema={activeSchema}
+            </>
+          ) : activeSchema ? (
+            <div className="border border-green-500 p-2 min-h-[200px] rounded">
+            <HTMLControlRenderer
+              html={activeSchema.html || ''}
+              config={activeSchema.htmlConfig || {}}
               connected={activeMode === 'ble' ? bleConnected : mqttConnected}
               onCommand={sendCommand}
+              previewMode={false}
             />
+            </div>
+          ) : (
+            <div className="no-schema">
+              <p>No control selected.</p>
+            </div>
           )}
         </div>
 

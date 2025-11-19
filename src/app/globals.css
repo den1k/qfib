@@ -86,7 +86,6 @@ body::before {
   -webkit-text-fill-color: #00ff00;
   background-clip: unset;
   -webkit-text-stroke: 1px #00ff00;
-  text-stroke: 1px #00ff00;
   filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.4));
   opacity: 1;
 }
@@ -117,7 +116,6 @@ body::before {
   -webkit-text-fill-color: #00ff00;
   background-clip: unset;
   -webkit-text-stroke: 0px transparent;
-  text-stroke: 0px transparent;
   filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.4));
   opacity: 1;
 }
@@ -227,6 +225,16 @@ body::before {
   color: var(--terminal-green) !important;
 }
 
+/* Terminal Panel Content - for HTML control containers */
+.terminal-panel-content {
+  color: var(--terminal-green) !important;
+}
+
+/* Ensure HTML control content inherits terminal theme */
+.html-control-renderer * {
+  color: var(--terminal-green) !important;
+}
+
 /* Override Tailwind form elements */
 input,
 textarea {
@@ -257,7 +265,6 @@ select:focus {
   border-color: var(--terminal-green) !important;
   box-shadow: var(--terminal-glow) !important;
   outline: none !important;
-  ring: 0 !important;
 }
 
 /* Retro Checkbox Styling */
@@ -361,230 +368,6 @@ button:disabled {
   background: #00cc00;
 }
 
-/* RJSF Custom Styles */
-.field-label {
-  display: block;
-  color: var(--terminal-green);
-  font-weight: 500;
-  font-size: 11px;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-  text-shadow: var(--terminal-text-shadow);
-}
-
-.field-label .required {
-  color: var(--terminal-red);
-}
-
-.error-message {
-  color: var(--terminal-red);
-  font-size: 10px;
-  text-shadow: 0 0 2px rgba(255, 0, 0, 0.5);
-}
-
-.object-field {
-  border: none;
-  background-color: transparent;
-  box-shadow: none;
-}
-
-/* Range Input Styling */
-.range-input {
-  width: 280px;
-  max-width: 100%;
-  background: transparent;
-  outline: none;
-  margin: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 16px;
-}
-
-.range-input::-webkit-slider-track {
-  background: var(--terminal-green);
-  border: 1px solid var(--terminal-green);
-  height: 1px;
-  border-radius: 0;
-}
-
-.range-input::-webkit-slider-thumb {
-  background: var(--terminal-bg);
-  border: 1px solid var(--terminal-green);
-  width: 10px;
-  height: 10px;
-  border-radius: 0;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.range-input::-webkit-slider-thumb:hover {
-  background: #333333;
-}
-
-.range-input::-moz-range-track {
-  background: var(--terminal-green);
-  border: 1px solid var(--terminal-green);
-  height: 1px;
-  border-radius: 0;
-}
-
-.range-input::-moz-range-thumb {
-  background: var(--terminal-bg);
-  border: 1px solid var(--terminal-green);
-  width: 10px;
-  height: 10px;
-  border-radius: 0;
-  cursor: pointer;
-}
-
-.range-input::-moz-range-thumb:hover {
-  background: #333333;
-}
-
-/* Movement Controls */
-.movement-controls {
-  padding: 0 !important;
-  border: none !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.movement-controls select {
-  height: 25px !important;
-  padding: 2px 6px !important;
-  font-size: 11px !important;
-}
-
-.movement-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 0;
-}
-
-.movement-button {
-  background-color: var(--terminal-bg);
-  color: var(--terminal-green);
-  border: 1px solid var(--terminal-green);
-  padding: 4px 8px;
-  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
-  font-size: 11px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.2s ease;
-  margin: 2px;
-  text-shadow: var(--terminal-text-shadow);
-  box-shadow: var(--terminal-border-glow);
-}
-
-.movement-button:hover {
-  background-color: var(--terminal-green);
-  color: var(--terminal-bg);
-  box-shadow: var(--terminal-glow);
-  text-shadow: none;
-}
-
-.movement-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.movement-button:disabled:hover {
-  background-color: var(--terminal-bg);
-  color: var(--terminal-green);
-}
-
-/* Messages Container */
-.messages-container {
-  scrollbar-width: thin;
-  scrollbar-color: var(--terminal-green) var(--terminal-bg);
-}
-
-.messages-container::-webkit-scrollbar {
-  width: 8px !important;
-}
-
-.messages-container::-webkit-scrollbar-track {
-  background: var(--terminal-bg) !important;
-  border: 1px solid var(--terminal-green) !important;
-}
-
-.messages-container::-webkit-scrollbar-thumb {
-  background: var(--terminal-green) !important;
-  border: 1px solid var(--terminal-bg) !important;
-  box-shadow: 0 0 2px rgba(0, 255, 0, 0.3) !important;
-}
-
-.messages-container::-webkit-scrollbar-thumb:hover {
-  background: #00cc00 !important;
-}
-
-/* Schema Editor Styles */
-.schema-editor {
-  width: 100%;
-  max-width: 100%;
-}
-
-.json-textarea {
-  width: 100%;
-  min-height: 400px;
-  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
-  font-size: 11px;
-  line-height: 1.4;
-  padding: 8px;
-  resize: vertical;
-}
-
-.json-textarea.error {
-  border-color: var(--terminal-red) !important;
-  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5) !important;
-}
-
-.schema-name-input {
-  margin-bottom: 8px;
-}
-
-.editor-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-/* Placeholder text size */
-input::placeholder,
-textarea::placeholder {
-  font-size: 10px !important;
-  opacity: 0.6;
-}
-
-/* Fix form field alignment */
-.dynamic-form-renderer .form-group {
-  margin-bottom: 8px;
-}
-
-.dynamic-form-renderer .form-group > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.dynamic-form-renderer button[type="submit"],
-.dynamic-form-renderer .submit-button {
-  display: block;
-  margin-top: 8px;
-  margin-left: 0;
-  margin-right: auto;
-}
-
-/* Ensure object fields don't interfere with button layout */
-.object-field {
-  display: block;
-}
-
-.object-field > div {
-  display: block;
-}
 
 /* Simple RC Controls */
 .simple-rc-controls {
